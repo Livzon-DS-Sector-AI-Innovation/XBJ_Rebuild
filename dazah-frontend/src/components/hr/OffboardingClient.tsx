@@ -6,6 +6,7 @@ import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant
 import { OffboardingRecord } from '@/types/hr'
 import { fetchOffboardingRecordsAction, deleteOffboardingRecord } from '@/actions/hr'
 import OffboardingForm from './OffboardingForm'
+import HrChatbot from './HrChatbot'
 
 interface OffboardingClientProps {
   initialRecords: OffboardingRecord[]
@@ -217,6 +218,8 @@ export default function OffboardingClient({
         onClose={() => setFormOpen(false)}
         onSuccess={handleFormSuccess}
       />
+
+      <HrChatbot />
     </div>
   )
 }

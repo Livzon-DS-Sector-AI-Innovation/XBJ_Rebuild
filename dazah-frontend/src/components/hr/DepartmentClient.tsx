@@ -7,6 +7,7 @@ import { Department } from '@/types/hr'
 import { fetchDepartmentsAction, deleteDepartment } from '@/actions/hr'
 import DepartmentForm from './DepartmentForm'
 import TeamClient from './TeamClient'
+import HrChatbot from './HrChatbot'
 
 interface DepartmentClientProps {
   initialDepartments: Department[]
@@ -207,6 +208,8 @@ export default function DepartmentClient({
           />
         )}
       </Modal>
+
+      <HrChatbot />
     </div>
   )
 }

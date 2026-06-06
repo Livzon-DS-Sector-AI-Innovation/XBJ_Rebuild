@@ -10,6 +10,7 @@ import { useHrStore } from '@/stores/hr'
 import EmployeeTable from './EmployeeTable'
 import EmployeeForm from './EmployeeForm'
 import FeishuSyncPanel from './FeishuSyncPanel'
+import HrChatbot from './HrChatbot'
 
 interface EmployeeProfileClientProps {
   initialEmployees: Employee[]
@@ -143,6 +144,8 @@ export default function EmployeeProfileClient({
         onClose={() => setFormOpen(false)}
         onSuccess={handleFormSuccess}
       />
+
+      <HrChatbot />
     </div>
   )
 }

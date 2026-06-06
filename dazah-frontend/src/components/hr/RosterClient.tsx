@@ -6,6 +6,7 @@ import { SearchOutlined, CheckCircleFilled } from '@ant-design/icons'
 import { Employee } from '@/types/hr'
 import { fetchEmployeesAction } from '@/actions/hr'
 import FeishuSyncPanel from './FeishuSyncPanel'
+import HrChatbot from './HrChatbot'
 
 interface RosterClientProps {
   initialEmployees: Employee[]
@@ -329,6 +330,8 @@ export default function RosterClient({ initialEmployees, initialTotal }: RosterC
         size="small"
         bordered
       />
+
+      <HrChatbot />
     </div>
   )
 }

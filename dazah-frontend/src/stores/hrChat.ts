@@ -10,7 +10,7 @@ interface HrChatState {
 
   toggleOpen: () => void
   setOpen: (open: boolean) => void
-  setInputValue: (value: string) => void
+  setInputValue: (value: string | ((prev: string) => string)) => void
   setPageContext: (ctx: HrPageContext | null) => void
   sendMessage: (content: string) => Promise<void>
   clearMessages: () => void
@@ -21,17 +21,23 @@ export const useHrChatStore = create<HrChatState>((set, get) => ({
     {
       role: 'assistant',
       content:
-        '你好！我是 HR 智能助手「小智」。\n你可以问我关于员工数据查询、整理分析或人事管理建议的问题。',
+        '你好！我是 HR 智能助手「小H」。\n你可以问我关于员工数据查询、整理分析或人事管理建议的问题。',
     },
   ],
-  isOpen: false,
+  isOpen: true,
   isLoading: false,
   inputValue: '',
   pageContext: null,
 
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
   setOpen: (open) => set({ isOpen: open }),
-  setInputValue: (value) => set({ inputValue: value }),
+  setInputValue: (value: string | ((prev: string) => string)) =>
+    set((state) => ({
+      inputValue:
+        typeof value === 'function'
+          ? (value as (prev: string) => string)(state.inputValue)
+          : value,
+    })),
   setPageContext: (ctx) => set({ pageContext: ctx }),
 
   sendMessage: async (content: string) => {
@@ -84,7 +90,7 @@ export const useHrChatStore = create<HrChatState>((set, get) => ({
         {
           role: 'assistant',
           content:
-            '对话已清空。我是 HR 智能助手「小智」，有什么可以帮你的？',
+            '对话已清空。我是 HR 智能助手「小H」，有什么可以帮你的？',
         },
       ],
     }),
