@@ -1,8 +1,9 @@
-const API_BASE = 'http://localhost:8001'
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
+  reasoning_content?: string
 }
 
 export interface HrPageContext {
@@ -15,9 +16,10 @@ export interface HrPageContext {
 export async function streamChat(
   messages: ChatMessage[],
   pageContext: HrPageContext | null,
-  onChunk: (chunk: string) => void,
+  onChunk: (type: 'reasoning' | 'content', text: string) => void,
   onDone: () => void,
   onError: (err: Error) => void,
+  onStreamError?: (errMsg: string) => void,
 ) {
   try {
     const res = await fetch(`${API_BASE}/api/v1/ai/chat/stream`, {
@@ -42,6 +44,8 @@ export async function streamChat(
       throw new Error('无法读取响应流')
     }
 
+    let streamError: string | null = null
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
@@ -54,8 +58,23 @@ export async function streamChat(
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6))
-            if (data.content) onChunk(data.content)
-            if (data.done) onDone()
+            if (data.reasoning_content) {
+              onChunk('reasoning', data.reasoning_content)
+            }
+            if (data.content) {
+              onChunk('content', data.content)
+            }
+            if (data.error) {
+              streamError = data.message || 'AI 服务发生错误'
+            }
+            if (data.done) {
+              if (streamError) {
+                onStreamError?.(streamError)
+              } else {
+                onDone()
+              }
+              return
+            }
           } catch {
             // ignore malformed lines
           }
@@ -63,7 +82,11 @@ export async function streamChat(
       }
     }
 
-    onDone()
+    if (streamError) {
+      onStreamError?.(streamError)
+    } else {
+      onDone()
+    }
   } catch (err: any) {
     onError(err instanceof Error ? err : new Error(String(err)))
   }

@@ -58,13 +58,20 @@ export const useHrChatStore = create<HrChatState>((set, get) => ({
     await streamChat(
       allMessages,
       pageContext,
-      (chunk) => {
+      (type, text) => {
         set((state) => {
-          const msgs = [...state.messages]
-          const last = msgs[msgs.length - 1]
-          if (last && last.role === 'assistant') {
-            last.content += chunk
-          }
+          const msgs = state.messages.map((msg, idx) => {
+            if (idx === state.messages.length - 1 && msg.role === 'assistant') {
+              if (type === 'reasoning') {
+                return {
+                  ...msg,
+                  reasoning_content: (msg.reasoning_content || '') + text,
+                }
+              }
+              return { ...msg, content: msg.content + text }
+            }
+            return msg
+          })
           return { messages: msgs }
         })
       },
@@ -73,12 +80,34 @@ export const useHrChatStore = create<HrChatState>((set, get) => ({
       },
       (err) => {
         set((state) => {
-          const msgs = [...state.messages]
-          const last = msgs[msgs.length - 1]
-          if (last && last.role === 'assistant') {
-            last.content += `\n\n[错误] ${err.message}`
+          const last = state.messages[state.messages.length - 1]
+          const hasEmptyAssistant = last?.role === 'assistant' && last?.content === ''
+          const msgs = hasEmptyAssistant
+            ? state.messages.slice(0, -1)
+            : [...state.messages]
+          return {
+            messages: [
+              ...msgs,
+              { role: 'assistant', content: `[系统错误] ${err.message}` },
+            ],
+            isLoading: false,
           }
-          return { messages: msgs, isLoading: false }
+        })
+      },
+      (errMsg) => {
+        set((state) => {
+          const last = state.messages[state.messages.length - 1]
+          const hasEmptyAssistant = last?.role === 'assistant' && last?.content === ''
+          const msgs = hasEmptyAssistant
+            ? state.messages.slice(0, -1)
+            : [...state.messages]
+          return {
+            messages: [
+              ...msgs,
+              { role: 'assistant', content: `[服务错误] ${errMsg}` },
+            ],
+            isLoading: false,
+          }
         })
       },
     )

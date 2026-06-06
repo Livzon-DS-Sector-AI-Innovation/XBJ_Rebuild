@@ -45,28 +45,6 @@ const QUICK_QUESTIONS = [
   '整理一份离职原因汇总',
 ]
 
-/** Parse <think>...</think> from assistant content */
-function parseThinking(content: string): {
-  answer: string
-  thinking: string | null
-  isThinking: boolean
-} {
-  const openIdx = content.indexOf('<think>')
-  const closeIdx = content.indexOf('</think>')
-
-  if (openIdx !== -1 && closeIdx !== -1 && closeIdx > openIdx) {
-    const thinking = content.slice(openIdx + 7, closeIdx).trim()
-    const answer = (content.slice(0, openIdx) + content.slice(closeIdx + 8)).trim()
-    return { answer, thinking, isThinking: false }
-  }
-
-  if (openIdx !== -1 && closeIdx === -1) {
-    const thinking = content.slice(openIdx + 7).trim()
-    return { answer: '', thinking, isThinking: true }
-  }
-
-  return { answer: content, thinking: null, isThinking: false }
-}
 
 export default function HrChatbot() {
   const pathname = usePathname()
@@ -214,8 +192,8 @@ export default function HrChatbot() {
           {messages.map((msg, idx) => {
             const isLastAssistant =
               msg.role === 'assistant' && idx === messages.length - 1
-            const { answer, thinking, isThinking } =
-              msg.role === 'assistant' ? parseThinking(msg.content) : { answer: msg.content, thinking: null, isThinking: false }
+            const isThinking =
+              isLastAssistant && isLoading && !!msg.reasoning_content && !msg.content
 
             return (
               <div
@@ -228,14 +206,14 @@ export default function HrChatbot() {
                   size="small"
                 />
                 <div className="max-w-[85%] space-y-1">
-                  {msg.role === 'assistant' && (thinking || isThinking) && (
+                  {msg.role === 'assistant' && (msg.reasoning_content || isThinking) && (
                     <div className="rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5">
                       <div className="flex items-center gap-1 text-amber-600 text-xs font-medium mb-0.5">
                         <BulbOutlined />
                         {isThinking ? '正在思考...' : '思考过程'}
                       </div>
                       <div className="text-xs text-amber-700 whitespace-pre-wrap leading-relaxed">
-                        {thinking}
+                        {msg.reasoning_content}
                       </div>
                     </div>
                   )}
@@ -247,8 +225,8 @@ export default function HrChatbot() {
                         : 'bg-white text-gray-800 shadow-sm border border-gray-100'
                     }`}
                   >
-                    {msg.role === 'assistant' && answer ? (
-                      <span>{answer}</span>
+                    {msg.role === 'assistant' && msg.content ? (
+                      <span>{msg.content}</span>
                     ) : msg.role === 'user' ? (
                       <span>{msg.content}</span>
                     ) : isLastAssistant && isLoading && !msg.content ? (
