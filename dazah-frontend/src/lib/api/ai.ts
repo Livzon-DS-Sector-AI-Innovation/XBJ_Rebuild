@@ -1,8 +1,15 @@
-const API_BASE = 'http://localhost:8001'
+const API_BASE = 'http://localhost:8002'
+
+export interface ChatAttachment {
+  type: 'image'
+  mime_type: string
+  data: string
+}
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
+  attachments?: ChatAttachment[]
 }
 
 export interface HrPageContext {
