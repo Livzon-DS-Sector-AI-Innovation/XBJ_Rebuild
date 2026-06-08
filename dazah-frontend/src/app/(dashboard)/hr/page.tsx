@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Card, Row, Col } from 'antd'
-import { TeamOutlined, ClockCircleOutlined, BookOutlined } from '@ant-design/icons'
+import { TeamOutlined, BookOutlined } from '@ant-design/icons'
 
 const modules = [
   {
@@ -9,13 +9,6 @@ const modules = [
     desc: '管理员工基本信息、入职离职、岗位变动等',
     icon: <TeamOutlined className="text-2xl text-[var(--color-primary)]" />,
     path: '/hr/profile',
-  },
-  {
-    key: 'attendance',
-    title: '考勤管理',
-    desc: '考勤记录、请假审批、加班统计等',
-    icon: <ClockCircleOutlined className="text-2xl text-[var(--color-primary)]" />,
-    path: '/hr/attendance',
   },
   {
     key: 'training',
@@ -34,7 +27,7 @@ export default function HrPage() {
           人事管理
         </h1>
         <p className="text-[14px] text-[var(--color-steel)]">
-          人员、岗位、培训、考勤等人事业务数据管理
+          人员、岗位、培训等人事业务数据管理
         </p>
       </div>
 
