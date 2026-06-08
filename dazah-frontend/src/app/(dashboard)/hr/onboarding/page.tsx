@@ -1,12 +1,13 @@
-export default function OnboardingPage() {
+import { fetchOnboardingRecords } from '@/lib/api/hr'
+import { OnboardingClient } from '@/components/hr'
+
+export default async function OnboardingPage() {
+  const res = await fetchOnboardingRecords({ page: 1, page_size: 20 })
+
   return (
-    <div>
-      <h1 className="text-[22px] font-semibold text-[var(--color-charcoal)] mb-2">
-        入职管理
-      </h1>
-      <p className="text-[14px] text-[var(--color-steel)]">
-        入职管理模块内容待开发
-      </p>
-    </div>
+    <OnboardingClient
+      initialRecords={res.data}
+      initialTotal={res.meta?.total || 0}
+    />
   )
 }

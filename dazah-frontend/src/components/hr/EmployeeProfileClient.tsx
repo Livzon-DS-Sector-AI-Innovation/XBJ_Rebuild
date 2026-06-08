@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Button, message, Tabs } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { Employee, Department } from '@/types/hr'
@@ -11,10 +11,22 @@ import EmployeeTable from './EmployeeTable'
 import EmployeeForm from './EmployeeForm'
 import FeishuSyncPanel from './FeishuSyncPanel'
 import HrChatbot from './HrChatbot'
+import TurnoverAnalysisPanel from './TurnoverAnalysisPanel'
 
 interface EmployeeProfileClientProps {
   initialEmployees: Employee[]
   initialTotal: number
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+
+  return debouncedValue
 }
 
 export default function EmployeeProfileClient({
@@ -31,6 +43,7 @@ export default function EmployeeProfileClient({
   const [departments, setDepartments] = useState<Department[]>([])
 
   const { searchKeyword, filterStatus } = useHrStore()
+  const debouncedSearchKeyword = useDebounce(searchKeyword, 300)
 
   const activeDepartment =
     activeTab === 'all'
@@ -40,7 +53,7 @@ export default function EmployeeProfileClient({
   const loadData = useCallback(async () => {
     try {
       const res = await fetchEmployeesAction({
-        keyword: searchKeyword || undefined,
+        keyword: debouncedSearchKeyword || undefined,
         department: activeDepartment || undefined,
         status: filterStatus || undefined,
         page,
@@ -51,7 +64,7 @@ export default function EmployeeProfileClient({
     } catch (err: any) {
       message.error(err.message || '加载数据失败')
     }
-  }, [searchKeyword, activeDepartment, filterStatus, page, pageSize])
+  }, [debouncedSearchKeyword, activeDepartment, filterStatus, page, pageSize])
 
   const loadDepartments = useCallback(async () => {
     try {
@@ -93,16 +106,19 @@ export default function EmployeeProfileClient({
 
   useEffect(() => {
     loadData()
-  }, [activeDepartment, filterStatus, searchKeyword, page, pageSize])
+  }, [debouncedSearchKeyword, activeDepartment, filterStatus, page, pageSize])
 
   useEffect(() => {
     loadDepartments()
   }, [loadDepartments])
 
-  const tabItems = [
-    { key: 'all', label: '全部', value: '' },
-    ...departments.map((d) => ({ key: d.id, label: d.name, value: d.name })),
-  ]
+  const tabItems = useMemo(
+    () => [
+      { key: 'all', label: '全部', value: '' },
+      ...departments.map((d) => ({ key: d.id, label: d.name, value: d.name })),
+    ],
+    [departments]
+  )
 
   return (
     <div className="space-y-4">
@@ -115,28 +131,27 @@ export default function EmployeeProfileClient({
         </Button>
       </div>
 
+      <TurnoverAnalysisPanel />
+
       <FeishuSyncPanel onSynced={handleRefresh} />
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={handleTabChange}
-        type="card"
-        items={tabItems.map((dept) => ({
-          key: dept.key,
-          label: dept.label,
-          children: (
-            <EmployeeTable
-              employees={employees}
-              total={total}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={handlePageChange}
-              onRefresh={handleRefresh}
-              onEdit={handleEdit}
-            />
-          ),
-        }))}
-      />
+      <Tabs activeKey={activeTab} onChange={handleTabChange} type="card">
+        {tabItems.map((dept) => (
+          <Tabs.TabPane key={dept.key} tab={dept.label}>
+            {activeTab === dept.key && (
+              <EmployeeTable
+                employees={employees}
+                total={total}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onRefresh={handleRefresh}
+                onEdit={handleEdit}
+              />
+            )}
+          </Tabs.TabPane>
+        ))}
+      </Tabs>
 
       <EmployeeForm
         open={formOpen}
