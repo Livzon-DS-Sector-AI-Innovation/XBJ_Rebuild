@@ -12,10 +12,12 @@ import {
   OffboardingRecordListResponse,
   OffboardingRecordCreateInput,
   OffboardingRecordUpdateInput,
+  OnboardingRecordListResponse,
+  DepartureRecordListResponse,
   SyncStatusResponse,
 } from '@/types/hr'
 
-const API_BASE = 'http://localhost:8002'
+const API_BASE = 'http://localhost:8003'
 
 export async function fetchEmployees(
   params?: {
@@ -106,6 +108,54 @@ export async function fetchOffboardingRecords(
     cache: 'no-store',
   })
   if (!res.ok) throw new Error('获取离职记录失败')
+  return res.json()
+}
+
+export async function fetchOnboardingRecords(
+  params?: {
+    employee_id?: string
+    keyword?: string
+    page?: number
+    page_size?: number
+  }
+): Promise<OnboardingRecordListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.employee_id) searchParams.set('employee_id', params.employee_id)
+  if (params?.keyword) searchParams.set('keyword', params.keyword)
+  searchParams.set('page', String(params?.page || 1))
+  searchParams.set('page_size', String(params?.page_size || 20))
+
+  const res = await fetch(`${API_BASE}/api/v1/hr/onboarding-records?${searchParams.toString()}`, {
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('获取入职记录失败')
+  return res.json()
+}
+
+export async function fetchDepartureRecords(
+  params?: {
+    department?: string
+    offboarding_type?: string
+    keyword?: string
+    sort_by?: string
+    sort_order?: string
+    page?: number
+    page_size?: number
+  }
+): Promise<DepartureRecordListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.department) searchParams.set('department', params.department)
+  if (params?.offboarding_type) searchParams.set('offboarding_type', params.offboarding_type)
+  if (params?.keyword) searchParams.set('keyword', params.keyword)
+  if (params?.sort_by) searchParams.set('sort_by', params.sort_by)
+  if (params?.sort_order) searchParams.set('sort_order', params.sort_order)
+  searchParams.set('page', String(params?.page || 1))
+  searchParams.set('page_size', String(params?.page_size || 20))
+
+  const res = await fetch(`${API_BASE}/api/v1/hr/departure-records?${searchParams.toString()}`, {
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('获取离职台账记录失败')
   return res.json()
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { moduleMenus } from "@/lib/menu-config"
-import { ModuleIcon, SearchIcon, BellIcon } from "@/components/icons"
+import { ModuleIcon, SearchIcon, BellIcon } from "@/components/icons.tsx"
 
 export function TopNav() {
   const pathname = usePathname()
