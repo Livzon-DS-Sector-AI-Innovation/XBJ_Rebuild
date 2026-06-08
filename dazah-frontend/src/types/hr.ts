@@ -308,3 +308,172 @@ export interface OffboardingRecordListResponse {
     total: number
   }
 }
+
+export interface OnboardingRecord {
+  id: string
+  seq_number?: number
+  employee_number: string
+  name: string
+  domain_account?: string
+  department: string
+  team?: string
+  position: string
+  job_category?: string
+  status_category?: string
+  is_employed?: string
+  hire_date: string
+  factory_entry_date?: string
+  livo_entry_date?: string
+  work_start_date?: string
+  graduation_date?: string
+  birth_month?: number
+  birth_day?: number
+  contract_type?: string
+  contract_start_date?: string
+  contract_end_date?: string
+  contract_start_2?: string
+  contract_end_2?: string
+  contract_start_3?: string
+  contract_end_3?: string
+  contract_start_4?: string
+  contract_end_4?: string
+  age?: number
+  work_years?: number
+  factory_tenure?: string
+  company_tenure?: string
+  hire_month?: string
+  school?: string
+  education?: string
+  major?: string
+  classification?: string
+  id_card?: string
+  id_card_expiry?: string
+  id_card_address?: string
+  current_address?: string
+  marital_status?: string
+  household_type?: string
+  political_status?: string
+  phone?: string
+  email?: string
+  emergency_contact_phone?: string
+  emergency_contact_relation?: string
+  bank_account?: string
+  bank_account_location?: string
+  training_id?: string
+  transfer_history?: string
+  remarks?: string[]
+  feishu_record_id?: string
+  feishu_synced_at?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface OnboardingRecordListResponse {
+  code: number
+  message: string
+  data: OnboardingRecord[]
+  meta?: {
+    page: number
+    page_size: number
+    total: number
+  }
+}
+
+export interface OnboardingRecordResponse {
+  code: number
+  message: string
+  data: OnboardingRecord
+}
+
+export interface DepartureRecord {
+  id: string
+  name: string
+  department: string
+  team?: string
+  position: string
+  job_category?: string
+  gender?: string
+  status_category?: string
+  livo_entry_date?: string
+  factory_entry_date?: string
+  work_start_date?: string
+  offboarding_date: string
+  company_tenure_at_leave?: string
+  education?: string
+  school?: string
+  major?: string
+  classification?: string
+  id_card?: string
+  native_place?: string
+  household_type?: string
+  marital_status?: string
+  political_status?: string
+  phone?: string
+  emergency_contact_phone?: string
+  emergency_contact_relation?: string
+  bank_account?: string
+  contract_type?: string
+  transfer_history?: string
+  offboarding_type: string
+  offboarding_reason?: string[]
+  offboarding_reason_2?: string[]
+  offboarding_remarks?: string[]
+  remarks?: string[]
+  feishu_record_id?: string
+  feishu_synced_at?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface DepartureRecordListResponse {
+  code: number
+  message: string
+  data: DepartureRecord[]
+  meta?: {
+    page: number
+    page_size: number
+    total: number
+  }
+}
+
+export interface DepartureRecordResponse {
+  code: number
+  message: string
+  data: DepartureRecord
+}
+
+export interface AiSuggestion {
+  suggestion: string
+  evidence: string
+}
+
+export interface TurnoverRawData {
+  period_start: string
+  period_end: string
+  onboarding_count: number
+  onboarding_by_department: Record<string, number>
+  onboarding_by_job_category: Record<string, number>
+  onboarding_by_education: Record<string, number>
+  departure_count: number
+  departure_by_reason: Record<string, number>
+  departure_by_department: Record<string, number>
+  departure_by_job_category: Record<string, number>
+  current_headcount: number
+}
+
+export interface TurnoverMetrics {
+  net_change: number
+  initial_headcount: number
+  turnover_rate: number
+}
+
+export interface TurnoverAnalysisResponse {
+  code: number
+  message: string
+  data: {
+    raw_data: TurnoverRawData
+    metrics: TurnoverMetrics
+    ai_summary: string
+    ai_suggestions: AiSuggestion[]
+  }
+}

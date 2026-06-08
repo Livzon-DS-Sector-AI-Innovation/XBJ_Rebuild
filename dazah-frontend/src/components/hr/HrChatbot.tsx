@@ -31,7 +31,6 @@ function getPageFromPath(path: string): { page: string; name: string } {
   if (path.includes('/hr/profile')) return { page: 'profile', name: '员工档案' }
   if (path.includes('/hr/departments')) return { page: 'departments', name: '部门管理' }
   if (path.includes('/hr/offboarding')) return { page: 'offboarding', name: '离职管理' }
-  if (path.includes('/hr/attendance')) return { page: 'attendance', name: '考勤管理' }
   if (path.includes('/hr/onboarding')) return { page: 'onboarding', name: '入职管理' }
   if (path.includes('/hr/training')) return { page: 'training', name: '培训管理' }
   if (path.includes('/hr/teams')) return { page: 'teams', name: '班组管理' }
