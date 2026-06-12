@@ -2,6 +2,7 @@ export interface SubMenuItem {
   key: string
   label: string
   path: string
+  children?: SubMenuItem[]
 }
 
 export interface ModuleMenu {
@@ -104,6 +105,23 @@ export const moduleMenus: ModuleMenu[] = [
       { key: "notice", label: "公告通知", path: "/admin/notice" },
       { key: "meeting", label: "会议管理", path: "/admin/meeting" },
       { key: "approval", label: "文件审批", path: "/admin/approval" },
+      {
+        key: "vehicle",
+        label: "车队管理",
+        path: "/admin/vehicles",
+        children: [
+          { key: "vehicles", label: "车辆信息", path: "/admin/vehicles" },
+          { key: "vehicle-requests", label: "用车申请", path: "/admin/vehicle-requests" },
+        ],
+      },
+      {
+        key: "it",
+        label: "IT管理",
+        path: "/admin/it-tickets",
+        children: [
+          { key: "it-tickets", label: "IT服务工单", path: "/admin/it-tickets" },
+        ],
+      },
     ],
   },
   {
