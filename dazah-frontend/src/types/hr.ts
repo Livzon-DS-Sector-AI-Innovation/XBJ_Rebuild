@@ -477,3 +477,44 @@ export interface TurnoverAnalysisResponse {
     ai_suggestions: AiSuggestion[]
   }
 }
+
+export interface Candidate {
+  id: string
+  name: string
+  position: string
+  gender?: string
+  school?: string
+  education?: string
+  major?: string
+  match_report?: string
+  recommendation_level?: string
+  resume_attachments?: Array<{
+    file_token: string
+    name: string
+    type: string
+    size: number
+  }>
+  feishu_record_id?: string
+  feishu_synced_at?: string
+  feishu_sync_status?: 'synced' | 'failed' | null
+  feishu_sync_error?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CandidateListResponse {
+  code: number
+  message: string
+  data: Candidate[]
+  meta?: {
+    page: number
+    page_size: number
+    total: number
+  }
+}
+
+export interface CandidateResponse {
+  code: number
+  message: string
+  data: Candidate
+}

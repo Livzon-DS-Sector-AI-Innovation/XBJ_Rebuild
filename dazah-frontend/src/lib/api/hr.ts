@@ -18,6 +18,8 @@ import {
   DepartureRecordResponse,
   SyncStatusResponse,
   TurnoverAnalysisResponse,
+  CandidateListResponse,
+  CandidateResponse,
 } from '@/types/hr'
 
 const API_BASE = 'http://127.0.0.1:8000'
@@ -257,5 +259,81 @@ export async function fetchTurnoverAnalysis(): Promise<TurnoverAnalysisResponse>
     cache: 'no-store',
   })
   if (!res.ok) throw new Error('获取人员流动分析失败')
+  return res.json()
+}
+
+// ─── Candidate APIs ───
+
+export async function fetchCandidates(
+  params?: {
+    position?: string
+    education?: string
+    recommendation_level?: string
+    sync_status?: string
+    keyword?: string
+    page?: number
+    page_size?: number
+  }
+): Promise<CandidateListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params?.position) searchParams.set('position', params.position)
+  if (params?.education) searchParams.set('education', params.education)
+  if (params?.recommendation_level) searchParams.set('recommendation_level', params.recommendation_level)
+  if (params?.sync_status) searchParams.set('sync_status', params.sync_status)
+  if (params?.keyword) searchParams.set('keyword', params.keyword)
+  searchParams.set('page', String(params?.page || 1))
+  searchParams.set('page_size', String(params?.page_size || 20))
+
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates?${searchParams.toString()}`, {
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('获取候选人列表失败')
+  return res.json()
+}
+
+export async function fetchCandidateById(id: string): Promise<CandidateResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}`, {
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('获取候选人详情失败')
+  return res.json()
+}
+
+export async function updateCandidateRecommendationLevel(
+  id: string,
+  recommendation_level: string
+): Promise<CandidateResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}/recommendation-level`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recommendation_level }),
+  })
+  if (!res.ok) throw new Error('更新推荐等级失败')
+  return res.json()
+}
+
+export async function deleteCandidate(id: string): Promise<{ code: number; message: string }> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error('删除候选人失败')
+  return res.json()
+}
+
+export async function syncCandidatesFromFeishu(): Promise<{ code: number; message: string; data: { created: number; updated: number; failed: number; total: number } }> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/sync-from-feishu`, {
+    method: 'POST',
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('从飞书同步候选人失败')
+  return res.json()
+}
+
+export async function syncCandidateToFeishu(id: string): Promise<CandidateResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}/sync-to-feishu`, {
+    method: 'POST',
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('同步候选人到飞书失败')
   return res.json()
 }

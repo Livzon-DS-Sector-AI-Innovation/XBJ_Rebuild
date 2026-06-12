@@ -1,0 +1,30 @@
+# Runtime / logs
+*.log
+*.log.old
+.backend.pid
+.frontend.pid
+
+# Playwright MCP traces
+.playwright-mcp/
+*.json.json.gz
+
+# Local test outputs
+test-report/
+report.html
+report.json
+pdf-*.png
+test_preview.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Root-level node_modules (monorepo managed per-package)
+/node_modules
+package-lock.json
+
+# Temporary / local docs
+IMPORT.md
+人事数据获取.md
+双击导出.bat
+migrate-export.ps1
