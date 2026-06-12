@@ -14,6 +14,7 @@ import {
   OffboardingRecordCreateInput,
   OffboardingRecordUpdateInput,
   OffboardingRecordListResponse,
+  Candidate,
 } from '@/types/hr'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8002'
@@ -294,5 +295,133 @@ export async function deleteOffboardingRecord(id: string) {
     throw new Error(err.message || '删除离职记录失败')
   }
   revalidatePath('/hr/offboarding')
+  return res.json()
+}
+
+// ─── Candidate Actions ───
+
+export async function parseResumePreviewAction(formData: FormData): Promise<{
+  code: number
+  message: string
+  data: {
+    gender: string
+    school: string
+    education: string
+    major: string
+    match_report: string
+    recommendation_level: string
+  }
+}> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/parse-preview`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '解析简历失败')
+  }
+  return res.json()
+}
+
+export async function createCandidateAction(formData: FormData): Promise<{
+  code: number
+  message: string
+  data: Candidate
+}> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '创建候选人失败')
+  }
+  revalidatePath('/hr/recruitment')
+  return res.json()
+}
+
+export async function updateCandidateAction(
+  id: string,
+  payload: {
+    position?: string
+    gender?: string
+    school?: string
+    education?: string
+    major?: string
+  }
+) {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '更新候选人信息失败')
+  }
+  revalidatePath('/hr/recruitment')
+  return res.json()
+}
+
+export async function updateCandidateRecommendationLevelAction(
+  id: string,
+  recommendation_level: string
+) {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}/recommendation-level`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recommendation_level }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '更新推荐等级失败')
+  }
+  revalidatePath('/hr/recruitment')
+  return res.json()
+}
+
+export async function deleteCandidateAction(id: string) {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '删除候选人失败')
+  }
+  revalidatePath('/hr/recruitment')
+  return res.json()
+}
+
+export async function syncCandidatesFromFeishuAction(): Promise<{
+  code: number
+  message: string
+  data: { created: number; updated: number; failed: number; total: number }
+}> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/sync-from-feishu`, {
+    method: 'POST',
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '从飞书同步候选人失败')
+  }
+  revalidatePath('/hr/recruitment')
+  return res.json()
+}
+
+export async function syncCandidateToFeishuAction(id: string): Promise<{
+  code: number
+  message: string
+  data: Candidate
+}> {
+  const res = await fetch(`${API_BASE}/api/v1/hr/candidates/${id}/sync-to-feishu`, {
+    method: 'POST',
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || '同步候选人到飞书失败')
+  }
+  revalidatePath('/hr/recruitment')
   return res.json()
 }
