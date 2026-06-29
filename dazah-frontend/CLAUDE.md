@@ -87,6 +87,26 @@ import { BatchTable } from '@/components/production'  // 通过 index.ts
 - Server Action 函数：动词开头（createBatch、updateBatch、submitApproval）
 - API 请求函数放在 lib/api/<模块>.ts，函数名以 fetch 开头（fetchBatches、fetchBatchById）
 
+## 文件头部注释（定稿后必写）
+
+每个组件/页面/action/类型文件**定稿后**，必须在文件最顶部用块注释写"标准档"头部注释，方便快速遍历和排障：
+
+```tsx
+/**
+ * <模块名> - <子功能>
+ * 业务: <一句话说清这个文件负责什么>
+ * 依赖: <连接的后端接口/其他模块，如 lib/api/hr.ts 的 fetchEmployees、飞书集成>
+ */
+```
+
+规则（防注释腐烂，重要）：
+- **只写"会变得慢、机器生不出来"的内容**：业务描述、对外依赖（调了哪些 API/别的模块）。
+- **不手写"会变得快"的值**：具体接口 URL、端口、环境变量值一律不写进注释。
+  - 要写接口 → 写指针 `见 lib/api/<模块>.ts`，不复制 URL。
+  - 后端地址走 `.env.local` 的 `API_BASE_URL`，注释不写死。
+- **变更代码时，必须同步检查头部"业务/依赖"是否还准确**；不准就改，否则注释会说谎。
+- 没有外部依赖的文件，`依赖:` 行写 `无` 即可，不要省略整块。
+
 ## 新增页面的步骤
 
 1. 在 app/(dashboard)/<模块>/ 下新建目录和 page.tsx
