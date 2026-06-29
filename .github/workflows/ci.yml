@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# 同一分支新 push 取消旧运行，省 Actions 额度
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 后端 ──
+  # 注：不加 paths 过滤。若 backend 设为"必过检查"，paths 过滤会导致
+  # 纯前端 PR 永远等不到该检查、无法合并。两个 job 都全跑，代价极小。
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dazah-backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dazah
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/dazah
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      # 用 ORM 直接建表，绕开对不齐的 Alembic 迁移链（迁移债另行处理）
+      - name: Provision test schema
+        run: uv run python scripts/ci_create_tables.py
+
+      # ── 阻断级：测试不过不能合 ──
+      - name: pytest
+        run: uv run pytest -q
+
+      # ── 警告级：暴露存量债但不阻断（continue-on-error）──
+      - name: ruff (warning)
+        continue-on-error: true
+        run: uv run ruff check app
+
+      - name: mypy (warning)
+        continue-on-error: true
+        run: uv run mypy app
+
+  # ── 前端 ──
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dazah-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      # 锁 Node 20：规避 Node24 下 eslint-config-next@14 的解析问题
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: dazah-frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── 阻断级 ──
+      - name: tsc
+        run: pnpm tsc --noEmit
+
+      - name: build
+        run: pnpm build
+
+      # ── 警告级 ──
+      - name: lint (warning)
+        continue-on-error: true
+        run: pnpm lint
