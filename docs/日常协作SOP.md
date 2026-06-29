@@ -132,7 +132,47 @@ docs/add-sop-czl             文档：加 SOP
 
 ---
 
-## 六、铁律（红线，别碰）
+## 六、多人并行开发与冲突处理
+
+三个人同时开发不同模块，谁先合谁后合**不会让项目崩**。核心原理：**git 按文件、按行比对，只有"同一文件同一段被两边都改了"才冲突。**
+
+### 大原则
+- **各改各模块目录**（`modules/hr/`、`modules/xxx/`）→ 天然不冲突，这是按模块分工的最大好处。
+- **真正会撞的是"大家都要动的公共文件"**：`app/api/router.py`、`pyproject.toml`/`package.json`、`.env.example`、`module_registry.py`、**数据库迁移**。
+
+### 防冲突积累（每天做）
+```powershell
+# 每天开工先把最新 main 同步到自己分支(别等合并那天才拉)
+git checkout 你的分支
+git fetch rebuild
+git merge rebuild/main
+# 没冲突→继续干; 有冲突→当天解决(越早越小)
+```
+> 配合分支保护的 `Require up to date`：合并前必须基于最新 main，所以冲突会在**你自己分支上提前暴露、提前解决**，不会污染 main。
+
+### 公共文件冲突（router/依赖/.env.example 等）
+- 多是"两人各加各的行" → 打开冲突文件，通常**两边的改动都保留**即可。
+- 不会就对 Claude 说：**"这个文件合并冲突了，帮我解决并解释为什么冲突"**。
+
+### 数据库迁移分叉（最该警惕）
+A、B 都基于同一迁移生成新迁移，A 先合后 B 拉取会出现两个 head：
+```powershell
+uv run alembic heads                          # 看是不是多个 head
+uv run alembic merge heads -m "merge migration"   # 合并成一个
+```
+> 不会就对 Claude 说：**"main 有新迁移了，帮我把我的迁移接到最新 head 后面"**。
+> 预防：要加迁移前在群里喊一声，避免两人同时生成分叉。
+
+### 一句话
+```
+各改各模块 → 基本不冲突
+碰公共文件/迁移 → 小冲突, 几分钟解决, 在自己分支上解决
+每天 pull main + 分支别超 3 天 → 冲突不积累
+```
+
+---
+
+## 七、铁律（红线，别碰）
 
 - ❌ **永远不要直接 push 到 main**（分支保护会拦，但别试）。
 - ❌ **永远不要自己点 Merge 自己没人批的 PR**（要等队友 Approve）。
@@ -143,7 +183,7 @@ docs/add-sop-czl             文档：加 SOP
 
 ---
 
-## 七、一句话总结
+## 八、一句话总结
 
 ```
 开工拉最新 → 开自己分支干 → commit 写清楚 → push 提 PR
