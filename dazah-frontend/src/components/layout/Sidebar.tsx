@@ -11,7 +11,10 @@ import { fetchTrainingLedgerPages, fetchAnnualTrainingPlans } from "@/lib/api/hr
 type MenuItem = Required<MenuProps>["items"][number]
 
 function buildMenuItems(items: SubMenuItem[]): MenuItem[] {
-  return items.map((item) => {
+  // 过滤 hidden 标记的菜单项（恢复时删除 SubMenuItem 上的 hidden: true 即可）
+  return items
+    .filter((item) => !item.hidden)
+    .map((item) => {
     if (item.children && item.children.length > 0) {
       return {
         key: item.key,

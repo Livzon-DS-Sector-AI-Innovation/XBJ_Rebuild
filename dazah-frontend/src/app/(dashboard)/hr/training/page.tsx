@@ -6,10 +6,34 @@ import {
   BookOutlined,
   RobotOutlined,
   CalendarOutlined,
+  UnorderedListOutlined,
+  TeamOutlined,
+  CheckSquareOutlined,
 } from '@ant-design/icons'
 import Link from 'next/link'
 
 const modules = [
+  {
+    key: 'records',
+    title: '培训列表',
+    desc: '培训场次管理，支持创建、通知、选人、确认、评估、归档全生命周期',
+    icon: <UnorderedListOutlined className="text-2xl text-[var(--color-primary)]" />,
+    path: '/hr/training/records',
+  },
+  {
+    key: 'specialists',
+    title: '培训专员',
+    desc: '按部门+厂区配置培训专员，用于接收选人任务通知',
+    icon: <TeamOutlined className="text-2xl text-[var(--color-primary)]" />,
+    path: '/hr/training/specialists',
+  },
+  {
+    key: 'select-tasks',
+    title: '选人任务',
+    desc: '查看各场次受训人员选派进度，管理选人任务',
+    icon: <CheckSquareOutlined className="text-2xl text-[var(--color-primary)]" />,
+    path: '/hr/training/select-tasks',
+  },
   {
     key: 'annual-plan',
     title: '年度培训计划',

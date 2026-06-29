@@ -3,6 +3,8 @@ export interface SubMenuItem {
   label: string
   path: string
   children?: SubMenuItem[]
+  /** 临时隐藏菜单项，设为 true 则不渲染。恢复时删除该字段即可 */
+  hidden?: boolean
 }
 
 export interface ModuleMenu {
@@ -128,6 +130,8 @@ export const moduleMenus: ModuleMenu[] = [
     path: "/hr",
     children: [
       {
+        // hidden: true — 临时隐藏"老厂"入口，恢复时删除此行
+        hidden: true,
         key: "old-factory",
         label: "老厂",
         path: "/hr/departments",
@@ -142,6 +146,8 @@ export const moduleMenus: ModuleMenu[] = [
         ],
       },
       {
+        // hidden: true — 临时隐藏"新厂"入口，恢复时删除此行
+        hidden: true,
         key: "new-factory",
         label: "新厂",
         path: "#",
@@ -158,9 +164,12 @@ export const moduleMenus: ModuleMenu[] = [
         label: "培训管理",
         path: "/hr/training",
         children: [
+          { key: "training-records", label: "培训列表", path: "/hr/training/records" },
+          { key: "training-specialists", label: "培训专员", path: "/hr/training/specialists" },
+          { key: "training-select-tasks", label: "选人任务", path: "/hr/training/select-tasks", hidden: true },
           { key: "new-onboarding-training", label: "新员工入职培训", path: "/hr/training/onboarding" },
-          { key: "new-training-notification", label: "培训通知", path: "/hr/training/notification" },
-          { key: "new-sign-in-sheet", label: "培训签到表", path: "/hr/training/sign-in" },
+          { key: "new-training-notification", label: "培训通知", path: "/hr/training/notification", hidden: true },
+          { key: "new-sign-in-sheet", label: "培训签到表", path: "/hr/training/sign-in", hidden: true },
           { key: "new-ai-exam", label: "AI 出题", path: "/hr/training/ai-exam" },
           {
             key: "new-annual-plan",

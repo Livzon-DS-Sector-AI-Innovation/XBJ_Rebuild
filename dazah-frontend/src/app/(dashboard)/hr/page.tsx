@@ -82,7 +82,7 @@ export default function HrPage() {
         </p>
       </div>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} style={{ display: 'none' }}>
         {modules.map((mod) => (
           <Col xs={24} sm={12} lg={8} key={mod.key}>
             <Link href={mod.path}>

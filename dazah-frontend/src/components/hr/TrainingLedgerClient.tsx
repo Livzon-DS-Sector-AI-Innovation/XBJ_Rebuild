@@ -79,7 +79,7 @@ export default function TrainingLedgerClient({
 
   const handleExport = async () => {
     try {
-      await exportTrainingLedger(employeeNumber)
+      await exportTrainingLedger({ employee_number: employeeNumber })
       message.success('导出成功')
     } catch (err: any) {
       message.error(err.message || '导出失败')
