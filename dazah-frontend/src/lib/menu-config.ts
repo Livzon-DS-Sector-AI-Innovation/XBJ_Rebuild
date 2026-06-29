@@ -130,8 +130,6 @@ export const moduleMenus: ModuleMenu[] = [
     path: "/hr",
     children: [
       {
-        // hidden: true — 临时隐藏"老厂"入口，恢复时删除此行
-        hidden: true,
         key: "old-factory",
         label: "老厂",
         path: "/hr/departments",
@@ -146,8 +144,6 @@ export const moduleMenus: ModuleMenu[] = [
         ],
       },
       {
-        // hidden: true — 临时隐藏"新厂"入口，恢复时删除此行
-        hidden: true,
         key: "new-factory",
         label: "新厂",
         path: "#",
