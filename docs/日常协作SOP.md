@@ -27,10 +27,10 @@ git status                              # 先看工作区干不干净
 # 如果有上次没提交的改动: 先决定提交还是 git stash 暂存, 别带进新分支
 git checkout main
 git pull
-git checkout -b 类型/描述-你的名字          # 例: fix/login-button-zhang
+git checkout -b 类型/描述-你的名字          # 例: fix/login-button-czl
 ```
 > 分支名格式见下方"分支命名规则"。**只用小写英文 + 短横线**，别用中文。
-> 不会就对 Claude 说：**"先看下工作区干净吗，然后从最新 main 给我开个分支叫 fix/login-button-zhang"**
+> 不会就对 Claude 说：**"先看下工作区干净吗，然后从最新 main 给我开个分支叫 fix/login-button-czl"**
 
 ### 干活中（随时存档）
 ```powershell
@@ -60,9 +60,9 @@ git push origin 你的分支名
 格式：**`<类型>/<简短英文描述>-<你的名字或代号>`**
 
 ```
-feat/employee-export-zhang     新功能：员工导出
+feat/employee-export-czl     新功能：员工导出
 fix/login-button-li            修 bug：登录按钮
-docs/add-sop-zhang             文档：加 SOP
+docs/add-sop-czl             文档：加 SOP
 ```
 
 类型前缀（选最贴切的一个）：
