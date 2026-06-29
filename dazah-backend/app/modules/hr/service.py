@@ -1,15 +1,15 @@
 """HR business workflows live here."""
 
 import logging
-import os
 from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.core.exceptions import DuplicateException, NotFoundException
 from app.modules.hr.models import (
+    AnnualTrainingPlan,
+    AnnualTrainingPlanItem,
     Candidate,
     Department,
     DepartureRecord,
@@ -17,13 +17,13 @@ from app.modules.hr.models import (
     OffboardingRecord,
     OnboardingRecord,
     Team,
-    TrainingApproval,
-    TrainingAssessment,
-    TrainingPlan,
-    TrainingPlanSop,
-    TrainingRecord,
+    TrainingLedger,
+    TrainingLedgerPage,
+    TrainingSession,
 )
 from app.modules.hr.repository import (
+    AnnualTrainingPlanItemRepository,
+    AnnualTrainingPlanRepository,
     CandidateRepository,
     DepartureRecordRepository,
     DepartmentRepository,
@@ -31,13 +31,15 @@ from app.modules.hr.repository import (
     OffboardingRecordRepository,
     OnboardingRecordRepository,
     TeamRepository,
-    TrainingApprovalRepository,
-    TrainingAssessmentRepository,
-    TrainingPlanRepository,
-    TrainingPlanSopRepository,
-    TrainingRecordRepository,
+    TrainingLedgerRepository,
+    TrainingLedgerPageRepository,
+    TrainingSessionRepository,
 )
 from app.modules.hr.schemas import (
+    AnnualTrainingPlanCreate,
+    AnnualTrainingPlanItemBatchUpdate,
+    AnnualTrainingPlanItemCreate,
+    AnnualTrainingPlanUpdate,
     CandidateCreate,
     CandidateUpdate,
     DepartureRecordCreate,
@@ -53,22 +55,12 @@ from app.modules.hr.schemas import (
     SyncStatusResponse,
     TeamCreate,
     TeamUpdate,
-    TrainingApprovalCreate,
-    TrainingApprovalUpdate,
-    TrainingAssessmentCreate,
-    TrainingAssessmentUpdate,
-    TrainingPlanCreate,
-    TrainingPlanUpdate,
-    TrainingPlanSopCreate,
-    TrainingPlanSopUpdate,
-    TrainingRecordCreate,
-    TrainingRecordUpdate,
+    TrainingLedgerCreate,
+    TrainingLedgerUpdate,
+    TrainingSessionCreate,
+    TrainingSessionUpdate,
 )
-from app.platform.ai.service import AiChatService
 from app.platform.integrations.feishu import FeishuBitableSync
-from app.platform.integrations.feishu.candidate_datasource import (
-    CandidateBitableDataSource,
-)
 from app.platform.integrations.feishu.employee_datasource import (
     EmployeeBitableDataSource,
 )
@@ -78,6 +70,11 @@ from app.platform.integrations.feishu.onboarding_datasource import (
 from app.platform.integrations.feishu.departure_datasource import (
     DepartureBitableDataSource,
 )
+from app.platform.integrations.feishu.candidate_datasource import (
+    CandidateBitableDataSource,
+)
+from app.core.config import get_settings
+from app.platform.ai.service import AiChatService
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +210,16 @@ class EmployeeService:
             raise NotFoundException("员工", str(employee_id))
         return employee
 
+    async def get_employee_by_number(self, employee_number: str) -> Employee:
+        employee = await self.repo.get_by_employee_number(employee_number)
+        if not employee:
+            # 旧厂未找到，尝试从新厂查询
+            new_emp = await self.repo.get_new_employee_by_number(employee_number)
+            if new_emp:
+                return new_emp
+            raise NotFoundException("员工", employee_number)
+        return employee
+
     async def create_employee(self, data: EmployeeCreate) -> Employee:
         existing = await self.repo.get_by_employee_number(data.employee_number)
         if existing:
@@ -220,6 +227,31 @@ class EmployeeService:
 
         employee = Employee(**data.model_dump())
         employee.status = "在职"
+
+        # 根据手机号获取飞书 open_id（非阻塞，失败仅记录日志）
+        if data.phone:
+            try:
+                from app.platform.integrations.feishu.im import FeishuIM
+
+                im = FeishuIM()
+                # 飞书接口要求手机号带 +86 区号
+                mobile = data.phone if data.phone.startswith("+") else f"+86{data.phone}"
+                mapping = await im.batch_get_open_ids_by_mobile([mobile])
+                open_id = mapping.get(mobile) or mapping.get(data.phone)
+                if open_id:
+                    employee.feishu_open_id = open_id
+                    logger.info(
+                        "Fetched feishu_open_id for employee %s: %s",
+                        data.employee_number,
+                        open_id,
+                    )
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch feishu open_id for phone %s: %s",
+                    data.phone,
+                    e,
+                )
+
         result = await self.repo.create(employee)
 
         # Sync to Feishu
@@ -302,6 +334,163 @@ class EmployeeService:
             sort_by=sort_by,
             sort_order=sort_order,
         )
+
+    async def notify_training(self, payload) -> dict:
+        """给受训人员发送飞书单聊消息。
+
+        老厂员工直接读取 employees 表的 feishu_open_id；
+        新厂员工从 employees_new 表查询，若缺少 feishu_open_id 则根据手机号实时获取。
+
+        Args:
+            payload: TrainingNotifyInput instance.
+        """
+        from app.platform.integrations.feishu.im import FeishuIM
+        from sqlalchemy import text
+
+        im = FeishuIM()
+        is_new_factory = getattr(payload, "factory", None) == "new"
+
+        # 1. 查询所有员工
+        emp_list: list[Employee] = []
+        missing_numbers: list[str] = []
+        for emp_no in payload.employee_numbers:
+            if is_new_factory:
+                sql = text(
+                    "SELECT * FROM hr.employees_new "
+                    "WHERE employee_number = :eno AND is_deleted = false"
+                )
+                result = await self.repo.session.execute(sql, {"eno": emp_no})
+                row = result.mappings().first()
+                if row:
+                    emp_list.append(Employee(**dict(row)))
+                else:
+                    missing_numbers.append(emp_no)
+            else:
+                emp = await self.repo.get_by_employee_number(emp_no)
+                if emp:
+                    emp_list.append(emp)
+                else:
+                    missing_numbers.append(emp_no)
+
+        # 2. 对缺少 open_id 的员工，按手机号批量获取
+        phones_to_fetch: list[str] = []
+        phone_emp_map: dict[str, Employee] = {}
+        for emp in emp_list:
+            if not emp.feishu_open_id and emp.phone:
+                mobile = emp.phone if emp.phone.startswith("+") else f"+86{emp.phone}"
+                phones_to_fetch.append(mobile)
+                phone_emp_map[mobile] = emp
+                # 同时保留原始号码作为 fallback key
+                if emp.phone not in phone_emp_map:
+                    phone_emp_map[emp.phone] = emp
+
+        if phones_to_fetch:
+            try:
+                open_id_mapping = await im.batch_get_open_ids_by_mobile(phones_to_fetch)
+                for mobile, open_id in open_id_mapping.items():
+                    emp = phone_emp_map.get(mobile)
+                    if emp and open_id:
+                        emp.feishu_open_id = open_id
+                        logger.info(
+                            "Fetched feishu_open_id for %s (%s): %s",
+                            emp.name, emp.employee_number, open_id,
+                        )
+                        # 把获取到的 openid 持久化到数据库
+                        try:
+                            if is_new_factory:
+                                update_sql = text(
+                                    "UPDATE hr.employees_new SET feishu_open_id = :oid WHERE employee_number = :eno"
+                                )
+                            else:
+                                update_sql = text(
+                                    "UPDATE hr.employees SET feishu_open_id = :oid WHERE employee_number = :eno"
+                                )
+                            await self.repo.session.execute(
+                                update_sql,
+                                {"oid": open_id, "eno": emp.employee_number},
+                            )
+                        except Exception as db_err:
+                            logger.warning(
+                                "Failed to persist feishu_open_id for %s: %s",
+                                emp.employee_number,
+                                db_err,
+                            )
+                # 统一 flush，让 get_db 在请求结束时统一 commit
+                await self.repo.session.flush()
+            except Exception as e:
+                logger.warning("Batch get open_id by mobile failed: %s", e)
+
+        # 3. 组装消息内容
+        time_str = ""
+        if payload.training_time_start and payload.training_time_end:
+            time_str = f"{payload.training_time_start} ~ {payload.training_time_end}"
+        content_lines = [
+            "【培训通知】",
+            f"主题：{payload.subject}",
+            f"时间：{payload.training_date} {time_str}",
+            f"地点：{payload.location or '待定'}",
+            f"培训师：{payload.trainer or '待定'}",
+        ]
+        if payload.content:
+            content_lines.append(f"内容：{payload.content}")
+        content_lines.append("请准时参加，自带笔记本笔，不得无故缺席。")
+        content = "\n".join(content_lines)
+
+        # 4. 逐条发送
+        sent = 0
+        failed = 0
+        details: list[dict] = []
+        for emp in emp_list:
+            open_id = emp.feishu_open_id
+            if not open_id:
+                failed += 1
+                reason = "数据库中缺少 feishu_open_id 且手机号未关联到飞书"
+                if not emp.phone:
+                    reason = "数据库中缺少 feishu_open_id 且无手机号"
+                details.append(
+                    {
+                        "employee_number": emp.employee_number,
+                        "name": emp.name,
+                        "status": "failed",
+                        "reason": reason,
+                    }
+                )
+                continue
+
+            try:
+                await im.send_text_message(open_id, content)
+                sent += 1
+                details.append(
+                    {
+                        "employee_number": emp.employee_number,
+                        "name": emp.name,
+                        "status": "sent",
+                    }
+                )
+            except Exception as e:
+                failed += 1
+                details.append(
+                    {
+                        "employee_number": emp.employee_number,
+                        "name": emp.name,
+                        "status": "failed",
+                        "reason": str(e),
+                    }
+                )
+
+        # 未找到的员工
+        for emp_no in missing_numbers:
+            failed += 1
+            details.append(
+                {
+                    "employee_number": emp_no,
+                    "name": "",
+                    "status": "failed",
+                    "reason": "未找到该员工",
+                }
+            )
+
+        return {"sent": sent, "failed": failed, "details": details}
 
     # ─── Bi-directional sync ───
 
@@ -727,6 +916,11 @@ class OnboardingRecordService:
                     stats["failed"] += 1
                     continue
 
+                # Skip records with empty critical fields (blank rows in Bitable)
+                if not data.get("name") or not data.get("department") or not data.get("hire_date"):
+                    logger.debug("Skipping blank onboarding record: %s", rid)
+                    continue
+
                 await self.repo.upsert_by_feishu_record_id(data)
                 existing = await self.repo.get_by_feishu_record_id(rid)
                 if existing and existing.created_at and (
@@ -860,6 +1054,256 @@ class DepartureRecordService:
         )
 
 
+class TrainingLedgerService:
+    def __init__(self, session: AsyncSession) -> None:
+        self.repo = TrainingLedgerRepository(session)
+
+    async def get_record(self, record_id: UUID) -> TrainingLedger:
+        record = await self.repo.get_by_id(record_id)
+        if not record:
+            raise NotFoundException("培训台账记录", str(record_id))
+        return record
+
+    async def create_record(self, data: TrainingLedgerCreate) -> TrainingLedger:
+        record = TrainingLedger(**data.model_dump())
+        return await self.repo.create(record)
+
+    async def update_record(
+        self, record_id: UUID, data: TrainingLedgerUpdate
+    ) -> TrainingLedger:
+        record = await self.get_record(record_id)
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(record, field, value)
+        return await self.repo.update(record)
+
+    async def delete_record(self, record_id: UUID) -> None:
+        record = await self.get_record(record_id)
+        await self.repo.soft_delete(record)
+
+    async def list_records(
+        self,
+        *,
+        employee_number: str | None = None,
+        ledger_type: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        sort_by: str = "training_date",
+        sort_order: str = "asc",
+    ) -> tuple[list[TrainingLedger], int]:
+        return await self.repo.list_records(
+            employee_number=employee_number,
+            ledger_type=ledger_type,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
+    async def create_from_notification(
+        self,
+        *,
+        employee_number: str,
+        training_date: date,
+        training_subject: str,
+        training_method: str | None,
+        trainer: str | None,
+        source_id: str | None = None,
+    ) -> TrainingLedger | None:
+        """当培训通知包含特定员工时，自动创建培训台账记录。"""
+        if source_id:
+            existing = await self.repo.get_by_source("notification", source_id)
+            if existing:
+                return existing
+
+        record = TrainingLedger(
+            employee_number=employee_number,
+            training_date=training_date,
+            training_subject=training_subject,
+            training_method=training_method,
+            trainer=trainer,
+            source_type="notification",
+            source_id=source_id,
+        )
+        return await self.repo.create(record)
+
+
+class TrainingLedgerPageService:
+    def __init__(self, session: AsyncSession) -> None:
+        self.repo = TrainingLedgerPageRepository(session)
+
+    async def list_pages(self) -> list[TrainingLedgerPage]:
+        return await self.repo.list_pages()
+
+    async def list_pages_with_department(self) -> list[tuple[TrainingLedgerPage, str | None, str | None]]:
+        return await self.repo.list_pages_with_department()
+
+    async def create_page(self, data) -> TrainingLedgerPage:
+        existing = await self.repo.get_by_employee_number(data.employee_number, data.ledger_type)
+        if existing:
+            raise DuplicateException("培训台账页面", f"{data.employee_number}({data.ledger_type})")
+        page = TrainingLedgerPage(**data.model_dump())
+        return await self.repo.create(page)
+
+
+class TrainingSessionService:
+    def __init__(self, session: AsyncSession) -> None:
+        self.repo = TrainingSessionRepository(session)
+
+    async def get_session(self, session_id: UUID) -> TrainingSession:
+        session_obj = await self.repo.get_by_id(session_id)
+        if not session_obj:
+            raise NotFoundException("培训记录", str(session_id))
+        return session_obj
+
+    async def create_session(self, data: TrainingSessionCreate) -> TrainingSession:
+        session_obj = TrainingSession(**data.model_dump())
+        return await self.repo.create(session_obj)
+
+    async def update_session(
+        self, session_id: UUID, data: TrainingSessionUpdate
+    ) -> TrainingSession:
+        session_obj = await self.get_session(session_id)
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(session_obj, field, value)
+        return await self.repo.update(session_obj)
+
+    async def update_status(self, session_id: UUID, status: str) -> TrainingSession:
+        session_obj = await self.get_session(session_id)
+        session_obj.status = status
+        return await self.repo.update(session_obj)
+
+    async def link_select_task(self, session_id: UUID, token: str) -> TrainingSession:
+        session_obj = await self.get_session(session_id)
+        session_obj.select_task_token = token
+        session_obj.status = "selecting"
+        return await self.repo.update(session_obj)
+
+    async def check_all_select_tasks_completed(self, session_id: UUID) -> bool:
+        session_obj = await self.get_session(session_id)
+        select_tasks = session_obj.select_tasks or []
+        if not select_tasks:
+            return False
+        return all(task.get("status") == "submitted" for task in select_tasks)
+
+    async def delete_session(self, session_id: UUID) -> None:
+        session_obj = await self.get_session(session_id)
+        await self.repo.soft_delete(session_obj)
+
+    async def list_sessions(
+        self,
+        *,
+        department: str | None = None,
+        keyword: str | None = None,
+        status: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        sort_by: str = "training_date",
+        sort_order: str = "desc",
+    ) -> tuple[list[TrainingSession], int]:
+        return await self.repo.list_sessions(
+            department=department,
+            keyword=keyword,
+            status=status,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            page_size=page_size,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+
+    async def check_all_select_tasks_completed(self, session_id: UUID) -> bool:
+        session_obj = await self.get_session(session_id)
+        select_tasks = session_obj.select_tasks or []
+        if not select_tasks:
+            return False
+        return all(task.get("status") == "submitted" for task in select_tasks)
+
+
+class AnnualTrainingPlanService:
+    def __init__(self, session: AsyncSession) -> None:
+        self.repo = AnnualTrainingPlanRepository(session)
+        self.item_repo = AnnualTrainingPlanItemRepository(session)
+
+    async def get_plan(self, plan_id: UUID) -> AnnualTrainingPlan:
+        plan = await self.repo.get_by_id(plan_id)
+        if not plan:
+            raise NotFoundException("年度培训计划", str(plan_id))
+        return plan
+
+    async def create_plan(self, data: AnnualTrainingPlanCreate) -> AnnualTrainingPlan:
+        existing = await self.repo.get_by_year_and_department(data.year, data.department)
+        if existing:
+            raise DuplicateException("年度培训计划", f"{data.year}年-{data.department}")
+        plan = AnnualTrainingPlan(**data.model_dump())
+        return await self.repo.create(plan)
+
+    async def update_plan(self, plan_id: UUID, data: AnnualTrainingPlanUpdate) -> AnnualTrainingPlan:
+        plan = await self.get_plan(plan_id)
+        update_data = data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(plan, field, value)
+        return await self.repo.update(plan)
+
+    async def delete_plan(self, plan_id: UUID) -> None:
+        plan = await self.get_plan(plan_id)
+        await self.repo.soft_delete(plan)
+
+    async def list_plans(
+        self,
+        *,
+        year: int | None = None,
+        department: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[AnnualTrainingPlan], int]:
+        return await self.repo.list_plans(
+            year=year,
+            department=department,
+            page=page,
+            page_size=page_size,
+        )
+
+
+class AnnualTrainingPlanItemService:
+    def __init__(self, session: AsyncSession) -> None:
+        self.repo = AnnualTrainingPlanItemRepository(session)
+        self.plan_repo = AnnualTrainingPlanRepository(session)
+
+    async def list_items(self, plan_id: UUID) -> list[AnnualTrainingPlanItem]:
+        return await self.repo.list_items(plan_id)
+
+    async def batch_update_items(
+        self, plan_id: UUID, data: AnnualTrainingPlanItemBatchUpdate
+    ) -> list[AnnualTrainingPlanItem]:
+        plan = await self.plan_repo.get_by_id(plan_id)
+        if not plan:
+            raise NotFoundException("年度培训计划", str(plan_id))
+
+        # 删除旧明细
+        await self.repo.delete_by_plan_id(plan_id)
+
+        # 创建新明细
+        results: list[AnnualTrainingPlanItem] = []
+        for idx, item_data in enumerate(data.items):
+            item = AnnualTrainingPlanItem(
+                plan_id=plan_id,
+                sort_order=idx,
+                **item_data.model_dump(exclude={"sort_order"}),
+            )
+            created = await self.repo.create(item)
+            results.append(created)
+        return results
+
+
 class CandidateService:
     def __init__(self, session: AsyncSession) -> None:
         self.repo = CandidateRepository(session)
@@ -917,7 +1361,6 @@ class CandidateService:
             doc = fitz.open(stream=resume_bytes, filetype="pdf")
             page_count = len(doc)
             logger.info("PDF opened: %d pages", page_count)
-            # Limit to first 5 pages to control token cost
             for idx, page in enumerate(doc):
                 if idx >= 5:
                     logger.warning(
@@ -992,7 +1435,9 @@ class CandidateService:
         recommendation_level: str | None = None,
     ) -> Candidate:
         """Create a candidate with resume upload and Feishu sync."""
-        # 1. Create local candidate record
+        import os
+        from typing import Any
+
         candidate = Candidate(
             name=name,
             position=position,
@@ -1005,7 +1450,6 @@ class CandidateService:
         )
         created = await self.repo.create(candidate)
 
-        # 2. Save PDF locally (always keep local copy as fallback)
         upload_dir = os.path.join(
             os.path.dirname(__file__), "..", "..", "..", "uploads", "resumes"
         )
@@ -1018,7 +1462,6 @@ class CandidateService:
         created.resume_storage_path = file_path
         await self.repo.update(created)
 
-        # 3. Upload to Feishu Drive and create Bitable record
         sync_error_parts: list[str] = []
         feishu_file: dict[str, Any] = {}
 
@@ -1074,7 +1517,6 @@ class CandidateService:
             setattr(candidate, field, value)
         updated = await self.repo.update(candidate)
 
-        # Sync back to Feishu if we have a record id and relevant fields changed
         if candidate.feishu_record_id:
             feishu_field_map = {
                 "position": "应聘职位名称",
@@ -1106,7 +1548,6 @@ class CandidateService:
         candidate.recommendation_level = level
         updated = await self.repo.update(candidate)
 
-        # Sync back to Feishu if we have a record id
         if candidate.feishu_record_id:
             try:
                 await self.bitable.update_recommendation_level(
@@ -1124,10 +1565,10 @@ class CandidateService:
         return updated
 
     async def sync_candidate_to_feishu(self, candidate_id: UUID) -> Candidate:
-        """Retry syncing a candidate (and resume) to Feishu.
+        """Retry syncing a candidate (and resume) to Feishu."""
+        import os
+        from typing import Any
 
-        Uses local resume file if available, otherwise raises an error.
-        """
         candidate = await self.get_candidate(candidate_id)
 
         if not candidate.resume_storage_path or not os.path.exists(candidate.resume_storage_path):
@@ -1193,7 +1634,6 @@ class CandidateService:
         candidate = await self.get_candidate(candidate_id)
         await self.repo.soft_delete(candidate)
 
-        # Optionally delete from Feishu if record exists
         if candidate.feishu_record_id:
             try:
                 await self.bitable.delete(candidate.feishu_record_id)
@@ -1201,11 +1641,7 @@ class CandidateService:
                 logger.exception("Failed to delete candidate from Feishu %s", candidate_id)
 
     async def sync_from_feishu(self) -> dict:
-        """Pull all candidate records from Feishu Bitable and upsert into local PG.
-
-        Returns:
-            {"created": N, "updated": N, "failed": N, "total": N}
-        """
+        """Pull all candidate records from Feishu Bitable and upsert into local PG."""
         raw_records = await self.bitable.fetch_all(page_size=500)
         stats = {"created": 0, "updated": 0, "failed": 0, "total": len(raw_records)}
 
@@ -1227,8 +1663,8 @@ class CandidateService:
                 else:
                     stats["updated"] += 1
 
-                # Download resume PDF if attachment exists and not already stored locally
                 if existing and rec.resume_attachments:
+                    import os
                     has_local = (
                         existing.resume_storage_path
                         and os.path.exists(existing.resume_storage_path)
@@ -1242,14 +1678,7 @@ class CandidateService:
         return stats
 
     async def _download_resume(self, candidate: Candidate, attachment: dict) -> None:
-        """Download resume PDF from Feishu and save to local storage.
-
-        Args:
-            candidate: The candidate record (must have id set).
-            attachment: The first attachment dict from resume_attachments.
-        """
         import os
-
         file_token = attachment.get("file_token")
         if not file_token:
             logger.warning("No file_token in attachment for candidate %s", candidate.id)
@@ -1267,7 +1696,6 @@ class CandidateService:
             upload_dir = os.path.abspath(upload_dir)
             os.makedirs(upload_dir, exist_ok=True)
 
-            # Preserve original extension if present, default to .pdf
             original_name = attachment.get("name", "")
             ext = os.path.splitext(original_name)[1] if original_name else ".pdf"
             if not ext:

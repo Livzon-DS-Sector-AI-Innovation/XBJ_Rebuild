@@ -1,9 +1,9 @@
 """HR business ORM models live here."""
 
-from datetime import date, datetime
+from datetime import date
 from uuid import UUID
 
-from sqlalchemy import JSON, Date, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Date, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.base_model import BaseModel
@@ -22,6 +22,17 @@ class Department(BaseModel):
     )
     description: Mapped[str | None] = mapped_column(
         String(256), nullable=True, comment="部门描述"
+    )
+    # ─── 考勤相关 ───
+    is_production: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+        comment="是否生产部门"
+    )
+    production_start_time: Mapped[str | None] = mapped_column(
+        String(8), nullable=True, comment="生产班次开始时间(HH:MM)"
+    )
+    production_end_time: Mapped[str | None] = mapped_column(
+        String(8), nullable=True, comment="生产班次结束时间(HH:MM)"
     )
 
     teams: Mapped[list["Team"]] = relationship(
@@ -80,6 +91,11 @@ class Employee(BaseModel):
         String(32), nullable=True, comment="职类"
     )
     level: Mapped[str | None] = mapped_column(String(32), nullable=True, comment="级别")
+
+    # ─── 考勤相关 ───
+    position_level: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, comment="职位级别(自动判定): 普通员工/工程师级/主管级"
+    )
 
     # ─── Qualifications ───
     qualifications: Mapped[list[str] | None] = mapped_column(
@@ -247,6 +263,9 @@ class Employee(BaseModel):
     )
 
     # ─── Feishu sync metadata ───
+    feishu_open_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="飞书 open_id"
+    )
     feishu_record_id: Mapped[str | None] = mapped_column(
         String(32), nullable=True, comment="飞书多维表格 record_id"
     )
@@ -372,6 +391,107 @@ class DepartureRecord(BaseModel):
     )
     feishu_synced_at: Mapped[date | None] = mapped_column(
         Date, nullable=True, comment="上次飞书同步时间"
+    )
+
+
+class TrainingLedger(BaseModel):
+    __tablename__ = "training_ledgers"
+    __table_args__ = (
+        Index("ix_training_ledgers_employee_number", "employee_number"),
+        Index("ix_training_ledgers_training_date", "training_date"),
+        {"schema": "hr"},
+    )
+
+    employee_number: Mapped[str] = mapped_column(
+        String(32), nullable=False, comment="工号"
+    )
+    training_date: Mapped[date] = mapped_column(
+        Date, nullable=False, comment="培训日期"
+    )
+    training_subject: Mapped[str] = mapped_column(
+        String(256), nullable=False, comment="培训课程/主题"
+    )
+    training_method: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="培训方式"
+    )
+    duration_hours: Mapped[float | None] = mapped_column(
+        nullable=True, comment="课时"
+    )
+    location: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, comment="培训地点"
+    )
+    trainer: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, comment="培训单位/培训师"
+    )
+    assessment_result: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, comment="考核成绩"
+    )
+    source_type: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="manual",
+        server_default="manual",
+        comment="来源: manual手动, notification培训通知关联",
+    )
+    source_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="来源ID"
+    )
+    remarks: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, comment="备注"
+    )
+    ledger_type: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="event",
+        server_default="event",
+        comment="台账类型: event=事件台账, sop=SOP培训台账",
+    )
+
+
+class TrainingLedgerPage(BaseModel):
+    """培训台账专属页面配置（动态菜单持久化）"""
+
+    __tablename__ = "training_ledger_pages"
+    __table_args__ = (
+        Index("ix_training_ledger_pages_employee_type", "employee_number", "ledger_type", unique=True),
+        {"schema": "hr"},
+    )
+
+    employee_number: Mapped[str] = mapped_column(
+        String(32), unique=True, nullable=False, comment="工号"
+    )
+    employee_name: Mapped[str] = mapped_column(
+        String(64), nullable=False, comment="员工姓名"
+    )
+    ledger_type: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="event",
+        server_default="event",
+        comment="台账类型: event=事件台账, sop=SOP培训台账",
+    )
+
+
+class TrainingSpecialist(BaseModel):
+    """培训专员配置 — 每个部门在每个厂区对应一个培训专员."""
+
+    __tablename__ = "training_specialists"
+    __table_args__ = (
+        Index("ix_training_specialists_department_factory", "department", "factory", unique=True),
+        {"schema": "hr"},
+    )
+
+    department: Mapped[str] = mapped_column(
+        String(64), nullable=False, comment="部门名称"
+    )
+    employee_number: Mapped[str] = mapped_column(
+        String(32), nullable=False, comment="培训专员工号"
+    )
+    employee_name: Mapped[str] = mapped_column(
+        String(64), nullable=False, comment="培训专员姓名"
+    )
+    factory: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="old", server_default="old", comment="厂区: old=旧厂, new=新厂"
     )
 
 
@@ -554,6 +674,157 @@ class OnboardingRecord(BaseModel):
     )
     feishu_synced_at: Mapped[date | None] = mapped_column(
         Date, nullable=True, comment="上次飞书同步时间"
+    )
+
+
+class AnnualTrainingPlan(BaseModel):
+    __tablename__ = "annual_training_plans"
+    __table_args__ = (
+        Index("ix_annual_training_plans_year", "year"),
+        Index("ix_annual_training_plans_department", "department"),
+        {"schema": "hr"},
+    )
+
+    year: Mapped[int] = mapped_column(Integer, nullable=False, comment="年度")
+    department: Mapped[str] = mapped_column(String(64), nullable=False, comment="部门")
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="草稿",
+        server_default="草稿",
+        comment="状态: 草稿, 已确认",
+    )
+
+    items: Mapped[list["AnnualTrainingPlanItem"]] = relationship(
+        "AnnualTrainingPlanItem",
+        back_populates="plan",
+        lazy="select",
+        cascade="all, delete-orphan",
+    )
+
+
+class TrainingSession(BaseModel):
+    """培训活动记录（按培训场次维度）"""
+
+    __tablename__ = "training_sessions"
+    __table_args__ = (
+        Index("ix_training_sessions_department", "department"),
+        Index("ix_training_sessions_training_date", "training_date"),
+        Index("ix_training_sessions_status", "status"),
+        {"schema": "hr"},
+    )
+
+    factory: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="old", server_default="old", comment="厂区: old=旧厂, new=新厂"
+    )
+    department: Mapped[str] = mapped_column(
+        String(64), nullable=False, comment="主办部门"
+    )
+    training_date: Mapped[date] = mapped_column(
+        Date, nullable=False, comment="培训日期"
+    )
+    subject: Mapped[str] = mapped_column(
+        String(256), nullable=False, comment="培训主题"
+    )
+    training_time_start: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="培训开始时间"
+    )
+    training_time_end: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="培训结束时间"
+    )
+    location: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, comment="培训地点"
+    )
+    trainer: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, comment="培训师"
+    )
+    training_method: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="培训方式"
+    )
+    content: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, comment="培训内容"
+    )
+    trainee_departments: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True, comment="受训部门列表"
+    )
+    employee_names: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True, comment="应出席受训人员姓名列表"
+    )
+    employee_numbers: Mapped[list[str] | None] = mapped_column(
+        JSON, nullable=True, comment="应出席受训人员工号列表"
+    )
+    issuer_department: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="落款部门"
+    )
+    issue_date: Mapped[date | None] = mapped_column(
+        Date, nullable=True, comment="落款日期"
+    )
+    remarks: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, comment="备注"
+    )
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default="draft",
+        server_default="draft",
+        comment="状态: draft草稿, notified已通知, selecting选择中, confirmed已确认, evaluated已评估, archived已归档",
+    )
+    select_task_token: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="飞书选择任务token（兼容旧单任务）"
+    )
+    select_tasks: Mapped[list[dict] | None] = mapped_column(
+        JSON, nullable=True, comment="多部门选择任务列表[{department, token, status, employee_names, employee_numbers}]"
+    )
+
+
+class AnnualTrainingPlanItem(BaseModel):
+    __tablename__ = "annual_training_plan_items"
+    __table_args__ = (
+        Index("ix_annual_training_plan_items_plan_id", "plan_id"),
+        {"schema": "hr"},
+    )
+
+    plan_id: Mapped[UUID] = mapped_column(
+        ForeignKey("hr.annual_training_plans.id"),
+        nullable=False,
+        comment="年度计划ID",
+    )
+    month: Mapped[str | None] = mapped_column(String(16), nullable=True, comment="月份")
+    trainee_count: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="培训人数")
+    duration_hours: Mapped[float | None] = mapped_column(nullable=True, comment="课时")
+    content_and_textbook: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, comment="培训内容及使用教材"
+    )
+    target_audience: Mapped[str | None] = mapped_column(
+        String(256), nullable=True, comment="培训对象"
+    )
+    position_and_count: Mapped[str | None] = mapped_column(
+        String(256), nullable=True, comment="参加岗位/参加人数"
+    )
+    training_method: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="培训方式"
+    )
+    training_hours: Mapped[float | None] = mapped_column(nullable=True, comment="培训学时")
+    confirmer: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="确认者"
+    )
+    confirm_date: Mapped[date | None] = mapped_column(Date, nullable=True, comment="确认日期")
+    remarks: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, comment="备注"
+    )
+    tracking_status: Mapped[str | None] = mapped_column(
+        String(16), nullable=True, comment="培训跟踪: 完成, 未完成"
+    )
+    sort_order: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+        comment="排序",
+    )
+
+    plan: Mapped["AnnualTrainingPlan"] = relationship(
+        "AnnualTrainingPlan", back_populates="items", lazy="select"
     )
 
 

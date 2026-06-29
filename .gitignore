@@ -58,3 +58,20 @@ dazah-frontend/postgresql.zip
 dazah-frontend/redis.zip
 dazah-backend/seed_data.sql
 dazah-frontend/_backup/
+
+# Database dumps
+*.sql
+*.dump
+dump.sql
+
+# Build/deploy artifacts
+output/
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Process pid files
+*.pid
+.frontend.pid
+.backend.pid
