@@ -82,10 +82,10 @@ jobs:
         with:
           version: 11
 
-      # 锁 Node 20：规避 Node24 下 eslint-config-next@14 的解析问题
+      # Node 22：pnpm 11 要求 Node ≥22.13。lint 是警告级，无需为其降到 Node20
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
           cache-dependency-path: dazah-frontend/pnpm-lock.yaml
 
