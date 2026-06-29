@@ -1,0 +1,21 @@
+# pre-commit 配置：本地提交前拦截"不可逆硬伤"。
+# 设计：只拦密钥/硬编码路径/.env/大文件（几乎不误报）。
+# ruff/mypy 不在此（会被存量债卡死提交），留在 CI 警告级。
+# 全 local hook，零网络下载（规避代理抖动）。
+#
+# 一次性启用（每个开发者克隆后做一次）：
+#   uv tool install pre-commit
+#   pre-commit install
+# 之后每次 git commit 自动跑。确属误报时可 git commit --no-verify 跳过。
+
+repos:
+  - repo: local
+    hooks:
+      - id: precommit-guard
+        name: 硬伤守卫（密钥/硬编码路径/.env/大文件）
+        entry: python scripts/precommit_guard.py
+        language: python
+        # 传入暂存的文件名；脚本只检查这些，不全仓扫描。
+        pass_filenames: true
+        # 二进制大文件也要查大小，所以不限定类型。
+        types: [file]
