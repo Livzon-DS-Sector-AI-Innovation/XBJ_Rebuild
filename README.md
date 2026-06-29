@@ -18,35 +18,43 @@ LivzonAI/
 
 ## 快速启动
 
+> ⚠️ **关于地址**：下面的 `localhost:8000` / `localhost:3000` 只是**本地开发的默认地址**。
+> 演示机 / 局域网 / 部署环境的 host 和端口会不同（如局域网 IP `192.168.x.x`、其他端口），
+> 通过环境变量配置（后端 `.env`，前端 `.env.local` 的 `API_BASE_URL`）。
+> **代码里不要写死这些地址**——跳转/回调链接从运行时取，详见 [`CLAUDE.md`](CLAUDE.md)「路径与跳转链接」。
+
 ### 前置要求
 
-- Node.js 18+
+- Node.js 22+（pnpm 11 要求）
 - Python 3.12+
-- PostgreSQL 15+
-- Redis 5+
+- Docker（数据库 PostgreSQL + Redis 跑在容器里）
 
 ### 1. 启动数据库
 
-确保 PostgreSQL 和 Redis 服务已运行：
+PostgreSQL 和 Redis 跑在 Docker 容器里：
 
 ```bash
-# PostgreSQL（默认端口 5432）
-# Redis（默认端口 6379）
+cd dazah-backend
+docker compose up -d        # 启动 postgres + redis
+docker ps                   # 确认两个容器在跑
 ```
+> 每次重启电脑后，需先 `docker compose up -d` 再启动项目。
 
 ### 2. 后端启动
 
 ```bash
 cd dazah-backend
 
-# 安装依赖
-uv sync
+# 安装依赖（含 ruff/mypy/pytest 等开发工具）
+uv sync --extra dev
 
 # 配置环境变量
 cp .env.example .env
 
 # 数据库迁移
 uv run alembic upgrade head
+# 若报错(迁移链已知不齐), 用 ORM 直接建表兜底:
+#   uv run python scripts/ci_create_tables.py
 
 # 导入种子数据（部门、班组等初始数据）
 uv run python scripts/seed.py
@@ -70,7 +78,8 @@ pnpm install
 pnpm dev
 ```
 
-前端地址：http://localhost:3000（或 3001 如果被占用）
+前端默认地址（本地开发）：http://localhost:3000（端口被占用时自动顺延，如 3001）。
+> 演示/局域网环境请用对应的 host:端口访问，后端地址由前端 `.env.local` 的 `API_BASE_URL` 配置，勿写死。
 
 ## 种子数据
 
@@ -83,10 +92,18 @@ pnpm dev
 
 运行 `uv run python scripts/seed.py` 即可将数据导入数据库。该脚本支持重复执行（已存在的数据会自动跳过）。
 
-## 开发规范
+## 文档导航（先看这里）
 
-- 后端开发规范见 `dazah-backend/CLAUDE.md`
-- 前端开发规范见 `dazah-frontend/CLAUDE.md`
+| 我想…… | 看这份 |
+|--------|--------|
+| **第一天上手**（装环境、跑起来、提首个 PR） | [`docs/新人上手指南.md`](docs/新人上手指南.md) |
+| **日常开发**（建分支、commit、提 PR、冲突处理） | [`docs/日常协作SOP.md`](docs/日常协作SOP.md) ← 最常用 |
+| **搬模块 / 大重构 / 清密钥** | [`docs/模块移植与合并SOP.md`](docs/模块移植与合并SOP.md) |
+| **强制规则**（协作分支 / 路径跳转 / 密钥） | [`CLAUDE.md`](CLAUDE.md) |
+| **查数据源 / 飞书配置 / 环境变量** | [`docs/数据源与飞书参考.md`](docs/数据源与飞书参考.md) |
+| **后端 / 前端编程规范** | `dazah-backend/CLAUDE.md` / `dazah-frontend/CLAUDE.md` |
+
+> 协作底线：不在 `main` 直接改，走分支 → PR（CI 绿 + 1 人审核）→ merge commit 合并。分支命名 `<类型>/<描述>-<代号>`，如 `feat/employee-export-czl`。
 
 ## 常见问题
 
