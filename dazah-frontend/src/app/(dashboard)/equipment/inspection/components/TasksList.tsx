@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, Button, Badge, Spin, Empty } from 'antd'
 
 interface InspectionTask {
   id: string
@@ -41,38 +39,36 @@ export function TasksList() {
     }
   }
 
-  if (loading) return <div>加载中...</div>
-  if (error) return <div className="text-red-500">{error}</div>
+  if (loading) return <Spin tip="加载中..." />
+  if (error) return <div style={{ color: 'red' }}>{error}</div>
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {tasks.length === 0 ? (
-        <div className="text-gray-500">暂无巡检任务</div>
+        <Empty description="暂无巡检任务" />
       ) : (
         tasks.map((task) => (
-          <Card key={task.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{task.task_no}</div>
-                  <div className="text-sm text-gray-500">
-                    {task.equipment_name || task.route_name || '未分配设备'}
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    计划时间: {new Date(task.planned_time).toLocaleString()}
-                  </div>
-                  {task.assignee_name && (
-                    <div className="text-sm text-gray-400">
-                      负责人: {task.assignee_name}
-                    </div>
-                  )}
+          <Card key={task.id} size="small">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{task.task_no}</div>
+                <div style={{ fontSize: '14px', color: '#666' }}>
+                  {task.equipment_name || task.route_name || '未分配设备'}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={getStatusVariant(task.status)}>{task.status}</Badge>
-                  <Button size="sm" variant="outline">查看</Button>
+                <div style={{ fontSize: '12px', color: '#999' }}>
+                  计划时间: {new Date(task.planned_time).toLocaleString()}
                 </div>
+                {task.assignee_name && (
+                  <div style={{ fontSize: '12px', color: '#999' }}>
+                    负责人: {task.assignee_name}
+                  </div>
+                )}
               </div>
-            </CardContent>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Badge color={getStatusColor(task.status)} text={task.status} />
+                <Button size="small">查看</Button>
+              </div>
+            </div>
           </Card>
         ))
       )}
@@ -80,16 +76,16 @@ export function TasksList() {
   )
 }
 
-function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusColor(status: string): string {
   switch (status) {
     case '待执行':
-      return 'secondary'
+      return 'blue'
     case '执行中':
-      return 'default'
+      return 'orange'
     case '已完成':
-      return 'outline'
+      return 'green'
     case '已关闭':
-      return 'destructive'
+      return 'red'
     default:
       return 'default'
   }

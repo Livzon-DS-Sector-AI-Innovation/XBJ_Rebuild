@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, Button, Badge, Spin, Empty } from 'antd'
 
 interface InspectionTemplate {
   id: string
@@ -37,32 +35,28 @@ export function TemplatesList() {
     }
   }
 
-  if (loading) return <div>加载中...</div>
-  if (error) return <div className="text-red-500">{error}</div>
+  if (loading) return <Spin tip="加载中..." />
+  if (error) return <div style={{ color: 'red' }}>{error}</div>
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {templates.length === 0 ? (
-        <div className="text-gray-500">暂无巡检模板</div>
+        <Empty description="暂无巡检模板" />
       ) : (
         templates.map((template) => (
-          <Card key={template.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{template.name}</div>
-                  {template.description && (
-                    <div className="text-sm text-gray-500">{template.description}</div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={template.is_active ? 'default' : 'secondary'}>
-                    {template.is_active ? '启用' : '停用'}
-                  </Badge>
-                  <Button size="sm" variant="outline">查看</Button>
-                </div>
+          <Card key={template.id} size="small">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{template.name}</div>
+                {template.description && (
+                  <div style={{ fontSize: '14px', color: '#666' }}>{template.description}</div>
+                )}
               </div>
-            </CardContent>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Badge status={template.is_active ? 'success' : 'default'} text={template.is_active ? '启用' : '停用'} />
+                <Button size="small">查看</Button>
+              </div>
+            </div>
           </Card>
         ))
       )}

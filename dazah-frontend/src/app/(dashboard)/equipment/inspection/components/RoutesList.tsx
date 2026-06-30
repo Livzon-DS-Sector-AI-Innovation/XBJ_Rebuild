@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, Button, Badge, Spin, Empty } from 'antd'
 
 interface InspectionRoute {
   id: string
@@ -38,35 +36,31 @@ export function RoutesList() {
     }
   }
 
-  if (loading) return <div>加载中...</div>
-  if (error) return <div className="text-red-500">{error}</div>
+  if (loading) return <Spin tip="加载中..." />
+  if (error) return <div style={{ color: 'red' }}>{error}</div>
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {routes.length === 0 ? (
-        <div className="text-gray-500">暂无巡检路线</div>
+        <Empty description="暂无巡检路线" />
       ) : (
         routes.map((route) => (
-          <Card key={route.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{route.name}</div>
-                  {route.description && (
-                    <div className="text-sm text-gray-500">{route.description}</div>
-                  )}
-                  <div className="text-sm text-gray-400">
-                    周期: {route.period_type}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={route.is_active ? 'default' : 'secondary'}>
-                    {route.is_active ? '启用' : '停用'}
-                  </Badge>
-                  <Button size="sm" variant="outline">查看</Button>
+          <Card key={route.id} size="small">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{route.name}</div>
+                {route.description && (
+                  <div style={{ fontSize: '14px', color: '#666' }}>{route.description}</div>
+                )}
+                <div style={{ fontSize: '12px', color: '#999' }}>
+                  周期: {route.period_type}
                 </div>
               </div>
-            </CardContent>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Badge status={route.is_active ? 'success' : 'default'} text={route.is_active ? '启用' : '停用'} />
+                <Button size="small">查看</Button>
+              </div>
+            </div>
           </Card>
         ))
       )}
