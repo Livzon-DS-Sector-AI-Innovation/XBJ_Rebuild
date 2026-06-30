@@ -29,8 +29,36 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    import asyncio
+
     logger.info("Starting %s (%s)", settings.APP_NAME, settings.APP_ENV)
+
+    # ── 安全模块专属飞书事件订阅（WebSocket 长连接，独立应用凭据）──
+    # 未配置 SAFETY_FEISHU_APP_ID/SECRET 时 start_ws 内部自动跳过，不阻断启动
+    from app.modules.safety.feishu.event_client import start_ws, stop_ws
+
+    safety_ws_task = asyncio.create_task(start_ws())
+
+    # ── 安全模块定时任务调度引擎 ──
+    from app.modules.safety.scheduler import (
+        scheduled_task_loop,
+        stop_scheduled_task_flag,
+    )
+
+    scheduler_task = asyncio.create_task(scheduled_task_loop())
+
+    logger.info("Background tasks started")
+
     yield
+
+    # 停止安全模块 WebSocket
+    await stop_ws()
+    safety_ws_task.cancel()
+
+    # 停止定时任务调度引擎
+    stop_scheduled_task_flag.set()
+    scheduler_task.cancel()
+
     logger.info("Shutting down %s", settings.APP_NAME)
 
 

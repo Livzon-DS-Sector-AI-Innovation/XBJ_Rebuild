@@ -79,6 +79,28 @@ class Settings(BaseSettings):
         "禁止出现'根据规则'、'依据以上信息'等元话语。"
     )
 
+    # 前端地址（用于飞书卡片/通知里的深链跳转，无请求上下文时使用）
+    FRONTEND_URL: str = "http://localhost:3000"
+
+    # 安全模块 AI 模型（文本 + 视觉，OpenAI 兼容；密钥只进本地 .env）
+    SAFETY_AI_TEXT_API_KEY: str = ""
+    SAFETY_AI_TEXT_BASE_URL: str = "https://api.deepseek.com"
+    SAFETY_AI_TEXT_MODEL: str = "deepseek-chat"
+    SAFETY_AI_VISION_API_KEY: str = ""
+    SAFETY_AI_VISION_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    SAFETY_AI_VISION_MODEL: str = "qwen-vl-max"
+    SAFETY_AI_TIMEOUT: int = 120
+
+    # 安全模块飞书（独立应用 + 隐患多维表格，未配置时自动跳过同步）
+    SAFETY_FEISHU_APP_ID: str = ""
+    SAFETY_FEISHU_APP_SECRET: str = ""
+    SAFETY_FEISHU_BITABLE_APP_TOKEN: str = ""
+    SAFETY_FEISHU_BITABLE_HAZARD_TABLE_ID: str = ""
+
+    # 安全/设备模块飞书群通知 chat_id（定时任务推送目标）
+    FEISHU_SAFETY_CHAT_ID: str = ""
+    FEISHU_EQUIPMENT_CHAT_ID: str = ""
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"
