@@ -168,10 +168,10 @@ async def list_inspection_tasks(
     result = await db.execute(query.offset(skip).limit(limit))
     tasks = result.scalars().all()
     return paginated_response(
-        items=[InspectionTaskResponse.model_validate(t) for t in tasks],
+        data=[InspectionTaskResponse.model_validate(t) for t in tasks],
+        page=skip // limit + 1 if limit else 1,
+        page_size=limit,
         total=len(tasks),
-        skip=skip,
-        limit=limit,
     )
 
 
@@ -319,10 +319,10 @@ async def list_inspection_templates(
     )
     templates = result.scalars().all()
     return paginated_response(
-        items=[InspectionTemplateResponse.model_validate(t) for t in templates],
+        data=[InspectionTemplateResponse.model_validate(t) for t in templates],
+        page=skip // limit + 1 if limit else 1,
+        page_size=limit,
         total=len(templates),
-        skip=skip,
-        limit=limit,
     )
 
 
@@ -361,10 +361,10 @@ async def list_inspection_records(
     result = await db.execute(query.offset(skip).limit(limit))
     records = result.scalars().all()
     return paginated_response(
-        items=[InspectionRecordResponse.model_validate(r) for r in records],
+        data=[InspectionRecordResponse.model_validate(r) for r in records],
+        page=skip // limit + 1 if limit else 1,
+        page_size=limit,
         total=len(records),
-        skip=skip,
-        limit=limit,
     )
 
 
