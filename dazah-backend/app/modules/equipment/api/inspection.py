@@ -56,10 +56,10 @@ async def list_inspection_routes(
     )
     routes = result.scalars().all()
     return paginated_response(
-        items=[InspectionRouteResponse.model_validate(r) for r in routes],
+        data=[InspectionRouteResponse.model_validate(r) for r in routes],
+        page=skip // limit + 1 if limit else 1,
+        page_size=limit,
         total=len(routes),
-        skip=skip,
-        limit=limit,
     )
 
 
