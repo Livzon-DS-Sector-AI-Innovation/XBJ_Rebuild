@@ -3,6 +3,7 @@
 from app.modules.equipment.api.calibration import router as calibration_router
 from app.modules.equipment.api.equipment import router as equipment_router
 from app.modules.equipment.api.failure_codes import router as failure_codes_router
+from app.modules.equipment.api.inspection import router as inspection_router
 from app.modules.equipment.api.work_orders import router as work_orders_router
 from app.shared.module_api import create_module_router
 from app.shared.module_registry import MODULES_BY_CODE
@@ -11,6 +12,9 @@ router = create_module_router(MODULES_BY_CODE["equipment"])
 
 # 设备台账路由
 router.include_router(equipment_router)
+
+# 巡检模块路由
+router.include_router(inspection_router, prefix="/inspection")
 
 # 维护模块路由
 router.include_router(failure_codes_router, prefix="/maintenance/failure-codes")

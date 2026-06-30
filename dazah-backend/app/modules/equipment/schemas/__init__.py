@@ -31,6 +31,18 @@ from app.modules.equipment.schemas.failure_code import (
     FailureCodeType,
     FailureCodeUpdate,
 )
+from app.modules.equipment.schemas.inspection import (
+    InspectionRecordCreate,
+    InspectionRecordResponse,
+    InspectionRouteCreate,
+    InspectionRouteResponse,
+    InspectionRouteUpdate,
+    InspectionTaskCreate,
+    InspectionTaskResponse,
+    InspectionTaskUpdate,
+    InspectionTemplateCreate,
+    InspectionTemplateResponse,
+)
 from app.modules.equipment.schemas.work_order import (
     VerificationResult,
     WorkOrderAssign,
@@ -84,4 +96,15 @@ __all__ = [
     "CalibrationPlanResponse",
     "CalibrationRecordCreate",
     "CalibrationRecordResponse",
+    # inspection
+    "InspectionRouteCreate",
+    "InspectionRouteUpdate",
+    "InspectionRouteResponse",
+    "InspectionTaskCreate",
+    "InspectionTaskUpdate",
+    "InspectionTaskResponse",
+    "InspectionTemplateCreate",
+    "InspectionTemplateResponse",
+    "InspectionRecordCreate",
+    "InspectionRecordResponse",
 ]
