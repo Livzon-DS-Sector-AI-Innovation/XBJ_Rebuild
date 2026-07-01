@@ -450,11 +450,11 @@ export default function HazardLedgerDetailPage() {
       setUserSearchLoading(true)
       try {
         const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
-        const params = new URLSearchParams({ keyword, limit: '50' })
-        const resp = await fetch(`${API_BASE}/api/v1/identity/personnel?${params}`)
+        const params = new URLSearchParams({ keyword, page_size: '50' })
+        const resp = await fetch(`${API_BASE}/api/v1/hr/employees?${params}`)
         if (resp.ok) {
           const json = await resp.json()
-          const items = (json.data?.items ?? []) as Record<string, unknown>[]
+          const items = (json.data ?? []) as Record<string, unknown>[]
           setUserOptions(items.map((u) => ({
             value: String(u.id),
             label: `${String(u.name)} - ${String(u.department || '未知部门')}`,

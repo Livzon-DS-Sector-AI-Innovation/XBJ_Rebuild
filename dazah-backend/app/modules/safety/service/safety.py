@@ -404,190 +404,6 @@ class SafetyService:
 
         return updated
 
-# ═══════════════════════════════════════════════════════════════
-# 测试阶段：通知硬编码目标
-# ═══════════════════════════════════════════════════════════════
-_TEST_NOTIFICATION_OPEN_ID = "ou_495039d6335d347b07ff92ad982b3b4e"  # 许康福
-_TEST_NOTIFICATION_NAME = "许康福"
-
-
-def _bitable_field_for_level(level: int) -> str:
-    """Level → 对应的多维表格审批字段名。"""
-    return {1: "部门负责人复核", 2: "分管领导复核", 3: "检查人员复核"}.get(level, f"{level}级复核")
-
-
-async def _send_verify_notification(hazard: HazardReport, level: int) -> None:
-    """异步发送复核通知到飞书。
-
-    测试阶段：通知目标硬编码为许康福，确保通知可达。
-    正式上线时删除 _TEST_NOTIFICATION_OPEN_ID 常量并恢复动态解析。
-
-    卡片包含审核通过/驳回/查看详情按钮 + 整改照片，点击后直接更新卡片状态。
-    """
-    try:
-        # ── 测试阶段：通知目标硬编码为许康福 ──
-        target_open_id = _TEST_NOTIFICATION_OPEN_ID
-        target_name = _TEST_NOTIFICATION_NAME
-        logger.info(
-            "复核通知(测试模式): 硬编码目标=%s open_id=%s hazard_no=%s level=%s",
-            target_name, target_open_id, hazard.hazard_no, level,
-        )
-
-        settings = get_settings()
-        detail_url = f"{settings.FRONTEND_URL}/safety/hazard/{hazard.id}"
-
-        level_labels = {1: "（部门负责人）", 2: "（分管领导）", 3: "（隐患发现人）"}
-        level_text = level_labels.get(level, f"{level}级")
-
-        reply_text = hazard.rectification_reply or "-"
-
-        content = (
-            f"**隐患编号：** {hazard.hazard_no or '-'}\n"
-            f"**隐患描述：** {hazard.description or '-'}\n"
-            f"**责任部门：** {hazard.department or '-'}\n"
-            f"**整改回复：** {reply_text}\n"
-            f"\n👆 请到多维表格中完成「审核通过」或「驳回整改」操作"
-        )
-
-        elements: list[dict] = []
-
-        # ── 照片上传辅助函数 ──
-        async def _upload_photos(photo_field: str | None, label: str) -> list[str]:
-            """解析 JSON 字段 → 上传飞书 → 返回 image_key 列表。"""
-            if not photo_field:
-                return []
-            try:
-                photos = json.loads(photo_field)
-                if not photos or not isinstance(photos, list):
-                    return []
-                clean = [p for p in photos if isinstance(p, str)]
-                if not clean:
-                    return []
-                from app.modules.safety.feishu.notification import upload_images_batch
-                logger.info("复核通知照片上传: hazard_no=%s label=%s count=%d", hazard.hazard_no, label, len(clean))
-                return await upload_images_batch(clean)
-            except Exception:
-                logger.exception("复核通知照片处理异常: hazard_no=%s label=%s", hazard.hazard_no, label)
-                return []
-
-        # ── 缺陷照片 vs 整改照片 并列对比 ──
-        defect_keys = await _upload_photos(hazard.defect_photos, "缺陷照片")
-        rectification_keys = await _upload_photos(hazard.rectification_photos, "整改后照片")
-
-        if defect_keys or rectification_keys:
-            columns: list[dict] = []
-
-            if defect_keys:
-                defect_col: dict = {
-                    "tag": "column",
-                    "width": "weighted",
-                    "weight": 1,
-                    "elements": [
-                        {"tag": "markdown", "content": "📷 **缺陷照片**"}
-                    ],
-                }
-                for key in defect_keys:
-                    defect_col["elements"].append({
-                        "tag": "img",
-                        "img_key": key,
-                        "alt": {"tag": "plain_text", "content": "缺陷照片"},
-                    })
-                columns.append(defect_col)
-
-            if rectification_keys:
-                rect_col: dict = {
-                    "tag": "column",
-                    "width": "weighted",
-                    "weight": 1,
-                    "elements": [
-                        {"tag": "markdown", "content": "✅ **整改后照片**"}
-                    ],
-                }
-                for key in rectification_keys:
-                    rect_col["elements"].append({
-                        "tag": "img",
-                        "img_key": key,
-                        "alt": {"tag": "plain_text", "content": "整改后照片"},
-                    })
-                columns.append(rect_col)
-
-            if columns:
-                elements.append({"tag": "hr"})
-                if len(columns) == 1:
-                    # 只有一种照片 → 直接展示
-                    elements.extend(columns[0]["elements"])
-                else:
-                    elements.append({
-                        "tag": "column_set",
-                        "flex_mode": "bisect",
-                        "background_style": "default",
-                        "columns": columns,
-                    })
-                logger.info(
-                    "复核通知照片已添加: hazard_no=%s defect=%d rect=%d",
-                    hazard.hazard_no, len(defect_keys), len(rectification_keys),
-                )
-
-        # ── 操作按钮（直接同意 / 驳回 → 写入 Bitable 对应审批字段）──
-        elements.append({
-            "tag": "action",
-            "actions": [
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "✅ 直接同意"},
-                    "type": "primary",
-                    "value": {
-                        "action": "approve_rectification",
-                        "record_id": hazard.feishu_record_id,
-                        "level": level,
-                    },
-                    "confirm": {
-                        "title": {"tag": "plain_text", "content": f"确认{level_text}审核通过"},
-                        "text": {"tag": "plain_text", "content": f"将在多维表格中将「{_bitable_field_for_level(level)}」设为「已同意」"},
-                    },
-                },
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "❌ 驳回"},
-                    "type": "danger",
-                    "value": {
-                        "action": "reject_rectification",
-                        "record_id": hazard.feishu_record_id,
-                        "level": level,
-                    },
-                    "confirm": {
-                        "title": {"tag": "plain_text", "content": "确认驳回整改"},
-                        "text": {"tag": "plain_text", "content": f"将在多维表格中将「{_bitable_field_for_level(level)}」设为「未同意」，隐患退回整改阶段"},
-                    },
-                },
-                {
-                    "tag": "button",
-                    "text": {"tag": "plain_text", "content": "📋 查看平台详情"},
-                    "type": "default",
-                    "url": detail_url,
-                },
-            ],
-        })
-
-        success = await send_user_card(
-            open_id=target_open_id,
-            title=f"🔔 隐患{level_text}复核通知",
-            content=content,
-            elements=elements,
-        )
-        if success:
-            logger.info(
-                "复核通知已发送（含审核按钮+照片）: hazard_no=%s level=%s to=%s open_id=%s",
-                hazard.hazard_no, level, target_name, target_open_id,
-            )
-        else:
-            logger.warning(
-                "复核通知发送失败: hazard_no=%s level=%s to=%s",
-                hazard.hazard_no, level, target_name,
-            )
-    except Exception as e:
-        logger.warning("复核通知异常: %s", e)
-
     async def delete_hazard(self, hazard_id: uuid.UUID) -> bool:
         """删除隐患"""
         return await self.repo.delete_hazard(hazard_id)
@@ -2066,4 +1882,189 @@ async def _send_verify_notification(hazard: HazardReport, level: int) -> None:
 
 # ==================== 操规修订 Service ====================
 
+
+
+# ═══════════════════════════════════════════════════════════════
+# 测试阶段：通知硬编码目标
+# ═══════════════════════════════════════════════════════════════
+_TEST_NOTIFICATION_OPEN_ID = "ou_495039d6335d347b07ff92ad982b3b4e"  # 许康福
+_TEST_NOTIFICATION_NAME = "许康福"
+
+
+def _bitable_field_for_level(level: int) -> str:
+    """Level → 对应的多维表格审批字段名。"""
+    return {1: "部门负责人复核", 2: "分管领导复核", 3: "检查人员复核"}.get(level, f"{level}级复核")
+
+
+async def _send_verify_notification(hazard: HazardReport, level: int) -> None:
+    """异步发送复核通知到飞书。
+
+    测试阶段：通知目标硬编码为许康福，确保通知可达。
+    正式上线时删除 _TEST_NOTIFICATION_OPEN_ID 常量并恢复动态解析。
+
+    卡片包含审核通过/驳回/查看详情按钮 + 整改照片，点击后直接更新卡片状态。
+    """
+    try:
+        # ── 测试阶段：通知目标硬编码为许康福 ──
+        target_open_id = _TEST_NOTIFICATION_OPEN_ID
+        target_name = _TEST_NOTIFICATION_NAME
+        logger.info(
+            "复核通知(测试模式): 硬编码目标=%s open_id=%s hazard_no=%s level=%s",
+            target_name, target_open_id, hazard.hazard_no, level,
+        )
+
+        settings = get_settings()
+        detail_url = f"{settings.FRONTEND_URL}/safety/hazard/{hazard.id}"
+
+        level_labels = {1: "（部门负责人）", 2: "（分管领导）", 3: "（隐患发现人）"}
+        level_text = level_labels.get(level, f"{level}级")
+
+        reply_text = hazard.rectification_reply or "-"
+
+        content = (
+            f"**隐患编号：** {hazard.hazard_no or '-'}\n"
+            f"**隐患描述：** {hazard.description or '-'}\n"
+            f"**责任部门：** {hazard.department or '-'}\n"
+            f"**整改回复：** {reply_text}\n"
+            f"\n👆 请到多维表格中完成「审核通过」或「驳回整改」操作"
+        )
+
+        elements: list[dict] = []
+
+        # ── 照片上传辅助函数 ──
+        async def _upload_photos(photo_field: str | None, label: str) -> list[str]:
+            """解析 JSON 字段 → 上传飞书 → 返回 image_key 列表。"""
+            if not photo_field:
+                return []
+            try:
+                photos = json.loads(photo_field)
+                if not photos or not isinstance(photos, list):
+                    return []
+                clean = [p for p in photos if isinstance(p, str)]
+                if not clean:
+                    return []
+                from app.modules.safety.feishu.notification import upload_images_batch
+                logger.info("复核通知照片上传: hazard_no=%s label=%s count=%d", hazard.hazard_no, label, len(clean))
+                return await upload_images_batch(clean)
+            except Exception:
+                logger.exception("复核通知照片处理异常: hazard_no=%s label=%s", hazard.hazard_no, label)
+                return []
+
+        # ── 缺陷照片 vs 整改照片 并列对比 ──
+        defect_keys = await _upload_photos(hazard.defect_photos, "缺陷照片")
+        rectification_keys = await _upload_photos(hazard.rectification_photos, "整改后照片")
+
+        if defect_keys or rectification_keys:
+            columns: list[dict] = []
+
+            if defect_keys:
+                defect_col: dict = {
+                    "tag": "column",
+                    "width": "weighted",
+                    "weight": 1,
+                    "elements": [
+                        {"tag": "markdown", "content": "📷 **缺陷照片**"}
+                    ],
+                }
+                for key in defect_keys:
+                    defect_col["elements"].append({
+                        "tag": "img",
+                        "img_key": key,
+                        "alt": {"tag": "plain_text", "content": "缺陷照片"},
+                    })
+                columns.append(defect_col)
+
+            if rectification_keys:
+                rect_col: dict = {
+                    "tag": "column",
+                    "width": "weighted",
+                    "weight": 1,
+                    "elements": [
+                        {"tag": "markdown", "content": "✅ **整改后照片**"}
+                    ],
+                }
+                for key in rectification_keys:
+                    rect_col["elements"].append({
+                        "tag": "img",
+                        "img_key": key,
+                        "alt": {"tag": "plain_text", "content": "整改后照片"},
+                    })
+                columns.append(rect_col)
+
+            if columns:
+                elements.append({"tag": "hr"})
+                if len(columns) == 1:
+                    # 只有一种照片 → 直接展示
+                    elements.extend(columns[0]["elements"])
+                else:
+                    elements.append({
+                        "tag": "column_set",
+                        "flex_mode": "bisect",
+                        "background_style": "default",
+                        "columns": columns,
+                    })
+                logger.info(
+                    "复核通知照片已添加: hazard_no=%s defect=%d rect=%d",
+                    hazard.hazard_no, len(defect_keys), len(rectification_keys),
+                )
+
+        # ── 操作按钮（直接同意 / 驳回 → 写入 Bitable 对应审批字段）──
+        elements.append({
+            "tag": "action",
+            "actions": [
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": "✅ 直接同意"},
+                    "type": "primary",
+                    "value": {
+                        "action": "approve_rectification",
+                        "record_id": hazard.feishu_record_id,
+                        "level": level,
+                    },
+                    "confirm": {
+                        "title": {"tag": "plain_text", "content": f"确认{level_text}审核通过"},
+                        "text": {"tag": "plain_text", "content": f"将在多维表格中将「{_bitable_field_for_level(level)}」设为「已同意」"},
+                    },
+                },
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": "❌ 驳回"},
+                    "type": "danger",
+                    "value": {
+                        "action": "reject_rectification",
+                        "record_id": hazard.feishu_record_id,
+                        "level": level,
+                    },
+                    "confirm": {
+                        "title": {"tag": "plain_text", "content": "确认驳回整改"},
+                        "text": {"tag": "plain_text", "content": f"将在多维表格中将「{_bitable_field_for_level(level)}」设为「未同意」，隐患退回整改阶段"},
+                    },
+                },
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": "📋 查看平台详情"},
+                    "type": "default",
+                    "url": detail_url,
+                },
+            ],
+        })
+
+        success = await send_user_card(
+            open_id=target_open_id,
+            title=f"🔔 隐患{level_text}复核通知",
+            content=content,
+            elements=elements,
+        )
+        if success:
+            logger.info(
+                "复核通知已发送（含审核按钮+照片）: hazard_no=%s level=%s to=%s open_id=%s",
+                hazard.hazard_no, level, target_name, target_open_id,
+            )
+        else:
+            logger.warning(
+                "复核通知发送失败: hazard_no=%s level=%s to=%s",
+                hazard.hazard_no, level, target_name,
+            )
+    except Exception as e:
+        logger.warning("复核通知异常: %s", e)
 
