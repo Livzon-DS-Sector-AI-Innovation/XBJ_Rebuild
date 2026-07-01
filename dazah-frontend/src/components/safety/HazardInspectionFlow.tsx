@@ -354,7 +354,7 @@ export default function HazardInspectionFlow({ variant = 'page', onDone }: Props
       setCurrentStep('form')
       setCurrentHazard(null)
       setDraftFormValues(undefined)
-    } catch {
+    } catch (_e) {
       message.error('保存草稿失败')
     } finally {
       setSubmitting(false)
@@ -378,7 +378,7 @@ export default function HazardInspectionFlow({ variant = 'page', onDone }: Props
       message.success('隐患已确认入库！')
       setCompletedHazardNo(currentHazard.hazard_no)
       setCurrentStep('done')
-    } catch {
+    } catch (_e) {
       message.error('确认操作失败')
     } finally {
       setConfirming(false)
@@ -414,7 +414,7 @@ export default function HazardInspectionFlow({ variant = 'page', onDone }: Props
       const updated = await refreshHazard(currentHazard.id)
       setCurrentHazard(updated)
       setCurrentStep('review')
-    } catch {
+    } catch (_e) {
       message.error('AI 重新执行失败')
       setCurrentStep('review')
     }
@@ -456,7 +456,7 @@ export default function HazardInspectionFlow({ variant = 'page', onDone }: Props
       } else {
         message.error(res.message || '删除失败')
       }
-    } catch {
+    } catch (_e) {
       message.error('删除失败')
     }
   }
