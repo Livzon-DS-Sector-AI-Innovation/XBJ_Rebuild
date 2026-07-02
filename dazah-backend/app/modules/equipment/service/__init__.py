@@ -52,6 +52,17 @@ from app.modules.equipment.service.work_order import (
     start_work_order,
     verify_work_order,
 )
+from app.modules.equipment.service.inspection_template import (
+    add_template_item,
+    complete_inspection,
+    create_inspection_template,
+    delete_inspection_template,
+    delete_template_item,
+    get_inspection_template_by_id,
+    get_inspection_templates,
+    update_inspection_template,
+    update_template_item,
+)
 
 __all__ = [
     # calibration
@@ -102,4 +113,14 @@ __all__ = [
     "get_work_orders",
     "start_work_order",
     "verify_work_order",
+    # inspection template
+    "add_template_item",
+    "complete_inspection",
+    "create_inspection_template",
+    "delete_inspection_template",
+    "delete_template_item",
+    "get_inspection_template_by_id",
+    "get_inspection_templates",
+    "update_inspection_template",
+    "update_template_item",
 ]

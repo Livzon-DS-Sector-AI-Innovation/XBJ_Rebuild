@@ -2,6 +2,10 @@ import { MaintenancePage } from '@/components/equipment'
 import { fetchEquipments, fetchWorkOrders, fetchWorkOrderStatistics, fetchFailureCodes, fetchCalibrationPlans, fetchCalibrationRecords } from '@/lib/api/equipment'
 import { Equipment, FailureCode, WorkOrder, WorkOrderStatistics, CalibrationPlan, CalibrationRecord } from '@/types/equipment'
 
+// 每次请求都重新 SSR，确保新建的设备能即时出现在工单关联设备下拉中
+// （工单抽屉只消费 SSR 传入的 initialEquipments，无客户端兜底刷新）
+export const dynamic = 'force-dynamic'
+
 const defaultStatistics: WorkOrderStatistics = {
   total: 0,
   by_status: {} as any,

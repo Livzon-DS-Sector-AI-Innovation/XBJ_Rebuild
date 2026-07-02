@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全模块功能展示报告</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .header .meta {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .summary {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .summary h2 {
+            color: #1890ff;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .summary-item {
+            background: #f0f7ff;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #1890ff;
+        }
+        .summary-item .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .summary-item .label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .module {
+            background: white;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .module-header {
+            background: #fafafa;
+            padding: 20px 25px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .module-title {
+            font-size: 20px;
+            color: #262626;
+            font-weight: 600;
+        }
+        .module-route {
+            font-size: 13px;
+            color: #8c8c8c;
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .module-body {
+            padding: 25px;
+        }
+        .module-desc {
+            color: #595959;
+            margin-bottom: 20px;
+            font-size: 15px;
+        }
+        .screenshot {
+            width: 100%;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #fafafa;
+        }
+        .screenshot img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .screenshot-caption {
+            padding: 10px 15px;
+            background: #fafafa;
+            border-top: 1px solid #e8e8e8;
+            font-size: 13px;
+            color: #8c8c8c;
+            text-align: center;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-success {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: #8c8c8c;
+            font-size: 14px;
+        }
+        .menu-info {
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .menu-info-title {
+            color: #d48806;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #262626;
+        }
+        tr:hover {
+            background: #fafafa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>安全模块功能展示报告</h1>
+            <div class="meta">
+                报告时间: 2026-07-01 | 模块状态: 已移植完成 | 截图数量: 16 张
+            </div>
+        </div>
+
+        <div class="summary">
+            <h2>功能总览</h2>
+            <p>安全模块已从"安全与设备模块-只读-仅参考"移植完成，共包含 <strong>19 个功能子模块</strong>，涵盖隐患排查、安全检查、事故管理、特殊作业、危险源辨识、安全培训、承包商管理、知识库、职业健康、EHS变更、法规管理、风险报备、定时任务、AI工作流配置等核心功能。</p>
+
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="number">19</div>
+                    <div class="label">功能子模块</div>
+                </div>
+                <div class="summary-item">
+                    <div class="number">23</div>
+                    <div class="label">数据库表</div>
+                </div>
+                <div class="summary-item">
+                    <div class="number">18</div>
+                    <div class="label">API 路由</div>
+                </div>
+                <div class="summary-item">
+                    <div class="number">16</div>
+                    <div class="label">截图展示</div>
+                </div>
+            </div>
+
+            <div class="menu-info">
+                <div class="menu-info-title">菜单暴露情况</div>
+                <div>当前侧边栏菜单仅暴露 <strong>4 个入口</strong>：安全检查、隐患排查、事故管理、安全培训。其余 <strong>12 个功能模块</strong> 需通过直接输入 URL 访问。</div>
+            </div>
+        </div>
+
+        <!-- 1. 仪表盘首页 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">1. 仪表盘首页</div>
+                <div class="module-route">/safety</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全模块仪表盘，聚合展示关键安全指标：未关闭隐患数、未完成危险源辨识数、即将到期证书、当天特殊作业报备、每日风险作业报备等统计信息。
+                </div>
+                <div class="screenshot">
+                    <img src="01-dashboard.png" alt="仪表盘首页">
+                    <div class="screenshot-caption">安全模块仪表盘 - 关键指标一览</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 安全检查 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">2. 安全检查</div>
+                <div class="module-route">/safety/check</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    支持多种检查类型（月度、节前、专项、部门、季节性、周检等）的安全检查管理。功能包括检查计划制定、检查执行记录、问题整改跟踪、检查报告生成。
+                </div>
+                <div class="screenshot">
+                    <img src="02-safety-check.png" alt="安全检查列表">
+                    <div class="screenshot-caption">安全检查列表页 - 多维度筛选与搜索</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 隐患排查 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">3. 隐患排查</div>
+                <div class="module-route">/safety/hazard</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    四步式隐患登记流程（隐患登记 → AI分析 → 确认结果 → 完成）。支持上传隐患图片进行AI智能识别，自动回填隐患分类、级别、整改建议。包含草稿箱功能，支持保存未完成登记。
+                </div>
+                <div class="screenshot">
+                    <img src="03-hazard-registration.png" alt="隐患排查登记页">
+                    <div class="screenshot-caption">隐患登记页 - 4步流程 + AI智能分析</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 隐患台账 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">4. 隐患台账</div>
+                <div class="module-route">/safety/hazard-ledger</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    隐患台账管理，支持按隐患级别、责任部门、发现日期等多维度筛选。展示隐患编号、描述、级别、状态、整改期限、验收人等完整信息，支持隐患详情查看和整改跟踪。
+                </div>
+                <div class="screenshot">
+                    <img src="04-hazard-ledger.png" alt="隐患台账">
+                    <div class="screenshot-caption">隐患台账页 - 多维度筛选与列表展示</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. 事故管理 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">5. 事故管理</div>
+                <div class="module-route">/safety/accident</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全事故全生命周期管理，从事故报告、调查分析、整改措施（CAPA）到事故关闭的完整流程。支持事故分级、直接原因/根本原因分析、整改任务分配与跟踪。
+                </div>
+                <div class="screenshot">
+                    <img src="05-accident.png" alt="事故管理">
+                    <div class="screenshot-caption">事故管理列表页 - 状态流转跟踪</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. 安全培训 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">6. 安全培训</div>
+                <div class="module-route">/safety/training</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全培训记录管理，支持培训计划制定、培训实施记录、培训效果评估、培训档案管理。涵盖新员工三级安全教育、专项安全培训、特种作业人员培训等类型。
+                </div>
+                <div class="screenshot">
+                    <img src="06-training.png" alt="安全培训">
+                    <div class="screenshot-caption">安全培训记录管理 - 培训档案一览</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. 特殊作业 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">7. 特殊作业</div>
+                <div class="module-route">/safety/special-ops</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    八大特殊作业（动火、受限空间、高处、吊装、临时用电、动土、断路、盲板抽堵）的报备与审批管理。支持作业风险等级评估、作业票管理、作业过程监督、作业完成验收。
+                </div>
+                <div class="screenshot">
+                    <img src="07-special-ops.png" alt="特殊作业管理">
+                    <div class="screenshot-caption">特殊作业管理 - 八大作业类型统计与报备列表</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. 危险源辨识 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">8. 危险源辨识</div>
+                <div class="module-route">/safety/hazard-identification</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    危险源辨识与风险评估，支持LEC法风险评价、风险分级管控、辨识台账管理。包含重大危险源识别、风险等级划分、管控措施制定等功能。
+                </div>
+                <div class="screenshot">
+                    <img src="08-hazard-identification.png" alt="危险源辨识">
+                    <div class="screenshot-caption">危险源辨识列表 - 风险等级可视化</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. 定时任务 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">9. 定时任务</div>
+                <div class="module-route">/safety/scheduled-tasks</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全相关定时任务配置与管理，支持cron表达式设置任务执行周期。可用于定期隐患排查提醒、安全检查计划触发、安全报告自动生成等场景。
+                </div>
+                <div class="screenshot">
+                    <img src="09-scheduled-tasks.png" alt="定时任务">
+                    <div class="screenshot-caption">定时任务管理 - cron表达式配置与启停控制</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. 承包商管理 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">10. 承包商管理</div>
+                <div class="module-route">/safety/contractor</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    承包商安全管理，包括承包商准入审核、安全资质管理、入厂安全教育、作业过程监督、安全绩效评价。确保承包商作业符合企业安全管理要求。
+                </div>
+                <div class="screenshot">
+                    <img src="10-contractor.png" alt="承包商管理">
+                    <div class="screenshot-caption">承包商管理 - 资质审核与绩效评价</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 11. 安全知识库 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">11. 安全知识库</div>
+                <div class="module-route">/safety/knowledge-base</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全知识文档管理，支持安全操作规程、安全技术标准、事故案例库、法规标准库等分类管理。提供全文检索、文档版本控制、权限管理等功能。
+                </div>
+                <div class="screenshot">
+                    <img src="11-knowledge-base.png" alt="安全知识库">
+                    <div class="screenshot-caption">安全知识库 - 文档分类管理与检索</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 12. 职业健康 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">12. 职业健康</div>
+                <div class="module-route">/safety/occupational-health</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    职业健康管理，包括职业病危害因素监测、职业健康体检管理、职业病防护设施管理、个人防护用品管理、职业健康档案管理等。
+                </div>
+                <div class="screenshot">
+                    <img src="12-occupational-health.png" alt="职业健康管理">
+                    <div class="screenshot-caption">职业健康管理 - 体检与防护设施管理</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 13. EHS变更 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">13. EHS变更</div>
+                <div class="module-route">/safety/ehs-change</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    EHS变更管理（环境、健康、安全），支持人员变更、工艺变更、设备变更、原材料变更等各类变更的风险评估与管控措施落实跟踪。
+                </div>
+                <div class="screenshot">
+                    <img src="13-ehs-change.png" alt="EHS变更管理">
+                    <div class="screenshot-caption">EHS变更管理 - 变更风险评估与跟踪</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 14. 法规管理 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">14. 法规管理</div>
+                <div class="module-route">/safety/regulation</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全生产法规标准管理，支持适用法规识别、法规要求分解、合规性评价、法规更新跟踪。包含法规库、标准库、合规检查表等管理功能。
+                </div>
+                <div class="screenshot">
+                    <img src="14-regulation.png" alt="法规管理">
+                    <div class="screenshot-caption">法规管理 - 适用法规库与合规评价</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 15. 风险报备 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">15. 风险报备</div>
+                <div class="module-route">/safety/risk-reporting</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    每日关键风险作业报备管理，用于记录和跟踪当天计划进行的高风险作业活动，支持风险等级评估、管控措施确认、作业完成反馈。
+                </div>
+                <div class="screenshot">
+                    <img src="15-risk-reporting.png" alt="风险报备">
+                    <div class="screenshot-caption">每日风险报备 - 关键风险作业登记</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 16. AI工作流配置 -->
+        <div class="module">
+            <div class="module-header">
+                <div class="module-title">16. AI工作流配置</div>
+                <div class="module-route">/safety/ai-workflow-config</div>
+            </div>
+            <div class="module-body">
+                <div class="module-desc">
+                    安全模块AI功能配置，包括隐患AI识别参数配置、危险源AI辨识模型设置、AI分析结果阈值调整等。支持对接DeepSeek/Qwen等AI模型。
+                </div>
+                <div class="screenshot">
+                    <img src="16-ai-workflow-config.png" alt="AI工作流配置">
+                    <div class="screenshot-caption">AI工作流配置 - AI模型与参数配置</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 移植状态汇总 -->
+        <div class="summary">
+            <h2>移植状态汇总</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>功能模块</th>
+                        <th>路由</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>仪表盘首页</td><td>/safety</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>安全检查</td><td>/safety/check</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>隐患排查</td><td>/safety/hazard</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>隐患台账</td><td>/safety/hazard-ledger</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>事故管理</td><td>/safety/accident</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>安全培训</td><td>/safety/training</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>特殊作业</td><td>/safety/special-ops</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>危险源辨识</td><td>/safety/hazard-identification</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>定时任务</td><td>/safety/scheduled-tasks</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>承包商管理</td><td>/safety/contractor</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>安全知识库</td><td>/safety/knowledge-base</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>职业健康</td><td>/safety/occupational-health</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>EHS变更</td><td>/safety/ehs-change</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>法规管理</td><td>/safety/regulation</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>风险报备</td><td>/safety/risk-reporting</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                    <tr><td>AI工作流配置</td><td>/safety/ai-workflow-config</td><td><span class="status-badge status-success">已移植</span></td></tr>
+                </tbody>
+            </table>
+
+            <div class="menu-info" style="margin-top: 25px;">
+                <div class="menu-info-title">后端支持</div>
+                <div>
+                    <strong>数据库表:</strong> 23 张安全相关表 |
+                    <strong>API 路由:</strong> 18 个接口端点 |
+                    <strong>AI 集成:</strong> DeepSeek（文本分析）、Qwen（图像识别）|
+                    <strong>飞书集成:</strong> 双向同步（隐患、危险源等数据）
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>报告生成时间: 2026-07-01 | 截图工具: Playwright MCP</p>
+            <p style="margin-top: 10px; font-size: 12px;">注：另有隐患详情页、危险源辨识新建/台账/详情、定时任务新建/详情、法规生成器等动态路由页面已移植但未单独截图展示</p>
+        </div>
+    </div>
+</body>
+</html>

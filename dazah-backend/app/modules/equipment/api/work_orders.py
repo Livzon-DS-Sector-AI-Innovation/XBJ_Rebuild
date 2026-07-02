@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import CurrentUser
-from app.core.exceptions import AppException
 from app.core.response import paginated_response, success_response
 from app.modules.equipment import service
 from app.modules.equipment.schemas import (
@@ -20,13 +19,6 @@ from app.modules.equipment.schemas import (
     WorkOrderVerify,
 )
 
-
-def _require_user(current_user: CurrentUser) -> uuid.UUID:
-    """要求已认证用户，返回用户ID"""
-    if not current_user:
-        raise AppException(message="需要登录才能执行此操作", status_code=401)
-    return current_user.id
-
 router = APIRouter()
 
 
@@ -36,7 +28,7 @@ async def create_work_order(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = None,
 ) -> JSONResponse:
-    reporter_id = _require_user(current_user)
+    reporter_id = current_user.id if current_user else None
     wo = await service.create_work_order(db, data, reporter_id)
     return success_response(data=WorkOrderResponse.model_validate(wo))
 
@@ -118,7 +110,7 @@ async def verify_work_order(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = None,
 ) -> JSONResponse:
-    verifier_id = _require_user(current_user)
+    verifier_id = current_user.id if current_user else None
     wo = await service.verify_work_order(db, work_order_id, verifier_id, data)
     return success_response(data=WorkOrderResponse.model_validate(wo))
 

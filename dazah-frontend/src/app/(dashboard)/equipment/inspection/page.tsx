@@ -1,64 +1,38 @@
 import { Metadata } from 'next'
-import Link from 'next/link'
-import { Button, Tabs, Card } from 'antd'
-import { TasksList } from './components/TasksList'
-import { RoutesList } from './components/RoutesList'
-import { TemplatesList } from './components/TemplatesList'
+import { InspectionPage } from '@/components/equipment/inspection/InspectionPage'
 
 export const metadata: Metadata = {
   title: '设备巡检 - 设备管理',
 }
 
-export default function InspectionPage() {
-  const items = [
-    {
-      key: 'tasks',
-      label: '巡检任务',
-      children: (
-        <Card
-          title="巡检任务列表"
-          extra={<Button type="primary">新建任务</Button>}
-        >
-          <TasksList />
-        </Card>
-      ),
-    },
-    {
-      key: 'routes',
-      label: '巡检路线',
-      children: (
-        <Card
-          title="巡检路线列表"
-          extra={<Button type="primary">新建路线</Button>}
-        >
-          <RoutesList />
-        </Card>
-      ),
-    },
-    {
-      key: 'templates',
-      label: '巡检模板',
-      children: (
-        <Card
-          title="巡检模板列表"
-          extra={<Button type="primary">新建模板</Button>}
-        >
-          <TemplatesList />
-        </Card>
-      ),
-    },
-  ]
+async function fetchData() {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
 
-  return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>设备巡检</h1>
-        <Link href="/equipment">
-          <Button>返回设备</Button>
-        </Link>
-      </div>
+  const [templatesRes, equipmentsRes, categoriesRes, locationsRes] = await Promise.all([
+    fetch(`${API_BASE}/api/v1/equipment/inspection/templates?page=1&page_size=200`, { cache: 'no-store' }),
+    fetch(`${API_BASE}/api/v1/equipment/equipments?page=1&page_size=2000`, { cache: 'no-store' }),
+    fetch(`${API_BASE}/api/v1/equipment/categories?page=1&page_size=200`, { cache: 'no-store' }),
+    fetch(`${API_BASE}/api/v1/equipment/locations?page=1&page_size=200`, { cache: 'no-store' }),
+  ])
 
-      <Tabs defaultActiveKey="tasks" items={items} />
-    </div>
-  )
+  const templates = templatesRes.ok ? (await templatesRes.json()).data || [] : []
+  const equipments = equipmentsRes.ok ? ((await equipmentsRes.json()).data?.items || []) : []
+  const categories = categoriesRes.ok ? ((await categoriesRes.json()).data?.items || []) : []
+  const locations = locationsRes.ok ? ((await locationsRes.json()).data?.items || []) : []
+
+  return {
+    initialTemplates: templates,
+    initialEquipments: equipments.map((e: { id: string; name: string; equipment_no: string }) => ({
+      id: e.id, name: e.name, equipment_no: e.equipment_no,
+    })),
+    initialCategories: categories,
+    initialLocations: locations.map((l: { id: string; name: string; code: string }) => ({
+      id: l.id, name: l.name, code: l.code,
+    })),
+  }
+}
+
+export default async function Page() {
+  const data = await fetchData()
+  return <InspectionPage {...data} />
 }

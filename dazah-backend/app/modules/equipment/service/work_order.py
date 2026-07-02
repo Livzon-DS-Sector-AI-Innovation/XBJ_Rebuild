@@ -73,7 +73,7 @@ async def _update_equipment_status(
 async def create_work_order(
     db: AsyncSession,
     data: WorkOrderCreate,
-    reporter_id: uuid.UUID,
+    reporter_id: uuid.UUID | None,
 ) -> WorkOrder:
     """创建维修工单"""
     equipment = await repo.get_equipment_by_id(db, data.equipment_id)
@@ -170,7 +170,7 @@ async def complete_work_order(
 async def verify_work_order(
     db: AsyncSession,
     work_order_id: uuid.UUID,
-    verifier_id: uuid.UUID,
+    verifier_id: uuid.UUID | None,
     data: WorkOrderVerify,
 ) -> WorkOrder:
     """验收工单"""

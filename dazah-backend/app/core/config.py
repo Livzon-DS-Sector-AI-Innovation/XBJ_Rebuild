@@ -101,6 +101,29 @@ class Settings(BaseSettings):
     FEISHU_SAFETY_CHAT_ID: str = ""
     FEISHU_EQUIPMENT_CHAT_ID: str = ""
 
+    # 设备模块飞书交互机器人（独立凭证，用于巡检通知/交互式巡检）
+    EQUIPMENT_FEISHU_APP_ID: str = ""
+    EQUIPMENT_FEISHU_APP_SECRET: str = ""
+    EQUIPMENT_FEISHU_WS_ENABLED: bool = False
+
+    # 设备模块巡检 AI 视觉分析（OpenAI 兼容，未配置 API_KEY 时 AI 端点返回明确错误）
+    EQUIPMENT_AI_VISION_API_KEY: str = ""
+    EQUIPMENT_AI_VISION_BASE_URL: str = (
+        "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    )
+    EQUIPMENT_AI_VISION_MODEL: str = "qwen-vl-max"
+    EQUIPMENT_AI_TIMEOUT: int = 120
+
+    # MinIO 对象存储（巡检照片等），默认关闭走本地存储
+    MINIO_ENABLED: bool = False
+    MINIO_ENDPOINT: str = ""
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
+    MINIO_BUCKET_PREFIX: str = "dazah"
+    MINIO_SECURE: bool = False
+    UPLOAD_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_MB: int = 10
+
     @property
     def is_production(self) -> bool:
         return self.APP_ENV == "production"

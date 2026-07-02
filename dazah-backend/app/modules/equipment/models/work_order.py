@@ -95,8 +95,9 @@ class WorkOrder(BaseModel):
     fault_description: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="故障描述"
     )
-    reporter_id: Mapped[uuid.UUID] = mapped_column(
+    reporter_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("identity.users.id"),
+        nullable=True,
         comment="报修人ID",
     )
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(
